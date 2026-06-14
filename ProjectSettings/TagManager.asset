@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Anchor
+  - Props
   layers:
   - Default
   - TransparentFX

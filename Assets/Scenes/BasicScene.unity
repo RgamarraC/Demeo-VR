@@ -19,7 +19,7 @@ RenderSettings:
   m_FogMode: 1
   m_FogDensity: 0.2
   m_LinearFogStart: 0
-  m_LinearFogEnd: 45.01
+  m_LinearFogEnd: 45
   m_AmbientSkyColor: {r: 0.103773594, g: 0.103773594, b: 0.103773594, a: 1}
   m_AmbientEquatorColor: {r: 0.04832682, g: 0.053293, b: 0.05660379, a: 1}
   m_AmbientGroundColor: {r: 0.028301895, g: 0.027634397, b: 0.027634397, a: 1}
@@ -130,6 +130,10 @@ PrefabInstance:
     - target: {fileID: 8530134041605771622, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
       propertyPath: m_Name
       value: bookcase1 (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530134041605771622, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     - target: {fileID: 9019248921969511388, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
       propertyPath: m_LocalPosition.x
@@ -368,6 +372,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: table2
       objectReference: {fileID: 0}
+    - target: {fileID: 737089991793079384, guid: 34c3aaf0f870a184bbd3750a0ff30e00, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 1241400309352093069, guid: 34c3aaf0f870a184bbd3750a0ff30e00, type: 3}
       propertyPath: m_CastShadows
       value: 1
@@ -393,6 +401,10 @@ PrefabInstance:
     - target: {fileID: 406602740003186972, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
       propertyPath: m_Name
       value: bookcase2 (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 406602740003186972, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     - target: {fileID: 1076179601000461222, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
       propertyPath: m_LocalPosition.x
@@ -495,6 +507,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (7)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1617,6 +1633,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: grave1 (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 2320955264223594957, guid: 7a338d1532c348646b090f946a86d835, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 3134048118114259831, guid: 7a338d1532c348646b090f946a86d835, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.2755401
@@ -1718,6 +1738,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (8)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2350,6 +2374,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: grave2
       objectReference: {fileID: 0}
+    - target: {fileID: 7873938363213662076, guid: 0c5ff028744990943b239eaa0eefd85d, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2652,6 +2680,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: bookcase2
       objectReference: {fileID: 0}
+    - target: {fileID: 406602740003186972, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 1076179601000461222, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.3489
@@ -2910,6 +2942,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column
       objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3010,6 +3046,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: bookcase1 (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 8530134041605771622, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 9019248921969511388, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.18700007
@@ -3086,7 +3126,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2066896392038131574, guid: 45288819fde2143449a96207b14db0bb, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.5068
+      value: 3.262
       objectReference: {fileID: 0}
     - target: {fileID: 2066896392038131574, guid: 45288819fde2143449a96207b14db0bb, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3180,6 +3220,10 @@ PrefabInstance:
     - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_Name
       value: barrel
+      objectReference: {fileID: 0}
+    - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3447,6 +3491,10 @@ PrefabInstance:
     - target: {fileID: 4149596575359450632, guid: 46ca2562afaa343459ddf474ceaaa8d0, type: 3}
       propertyPath: m_Name
       value: chest1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4149596575359450632, guid: 46ca2562afaa343459ddf474ceaaa8d0, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3731,6 +3779,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3916,6 +3968,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4140,6 +4196,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (4)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4403,7 +4463,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.05985999
+      value: -0.05836749
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalPosition.y
@@ -4411,7 +4471,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.8200486
+      value: -1.8374987
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4444,6 +4504,10 @@ PrefabInstance:
     - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_Name
       value: barrel (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4655,6 +4719,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: barrel (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4725,6 +4793,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: barrel (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4787,6 +4859,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -4815,7 +4891,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.07026005
+      value: -0.06876755
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalPosition.y
@@ -4823,7 +4899,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.8354101
+      value: -1.8528602
       objectReference: {fileID: 0}
     - target: {fileID: 4905162254295624786, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4856,6 +4932,10 @@ PrefabInstance:
     - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_Name
       value: barrel
+      objectReference: {fileID: 0}
+    - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5132,6 +5212,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (10)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -6251,6 +6335,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6728,6 +6816,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: column (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -6992,7 +7084,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.06099248
+      value: -0.059
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.y
@@ -7000,7 +7092,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.7977498
+      value: -1.8231
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalRotation.w
@@ -7034,6 +7126,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: wooden_box
       objectReference: {fileID: 0}
+    - target: {fileID: 8057742517585801461, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -7055,6 +7151,10 @@ PrefabInstance:
     - target: {fileID: 406602740003186972, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
       propertyPath: m_Name
       value: bookcase2 (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 406602740003186972, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     - target: {fileID: 1076179601000461222, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
       propertyPath: m_LocalPosition.x
@@ -7256,7 +7356,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7366746592574342348, guid: 6817de37c25ca9f40b71338e5b1764ff, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.1396
+      value: -0.1338
       objectReference: {fileID: 0}
     - target: {fileID: 7366746592574342348, guid: 6817de37c25ca9f40b71338e5b1764ff, type: 3}
       propertyPath: m_LocalPosition.y
@@ -7264,7 +7364,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7366746592574342348, guid: 6817de37c25ca9f40b71338e5b1764ff, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.5004
+      value: -1.5206
       objectReference: {fileID: 0}
     - target: {fileID: 7366746592574342348, guid: 6817de37c25ca9f40b71338e5b1764ff, type: 3}
       propertyPath: m_LocalRotation.w
@@ -7297,6 +7397,10 @@ PrefabInstance:
     - target: {fileID: 7885838485461327478, guid: 6817de37c25ca9f40b71338e5b1764ff, type: 3}
       propertyPath: m_Name
       value: chair2 (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885838485461327478, guid: 6817de37c25ca9f40b71338e5b1764ff, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -7397,6 +7501,10 @@ PrefabInstance:
     - target: {fileID: 8530134041605771622, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
       propertyPath: m_Name
       value: bookcase1 (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8530134041605771622, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     - target: {fileID: 9019248921969511388, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
       propertyPath: m_LocalPosition.x
@@ -7743,6 +7851,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: bookcase2 (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 406602740003186972, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 1076179601000461222, guid: 47bbb04e0c63c9c498f62c86a35495b7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.3489
@@ -7844,6 +7956,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8097,7 +8213,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.036746502
+      value: -0.035254
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.y
@@ -8105,7 +8221,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.8238721
+      value: -1.8413222
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalRotation.w
@@ -8138,6 +8254,10 @@ PrefabInstance:
     - target: {fileID: 8057742517585801461, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_Name
       value: wooden_box (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8057742517585801461, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8301,6 +8421,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: bookcase1
       objectReference: {fileID: 0}
+    - target: {fileID: 8530134041605771622, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 9019248921969511388, guid: 169a8d5577ba03d418fe1e454f026383, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.3494
@@ -8410,6 +8534,10 @@ PrefabInstance:
     - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
       propertyPath: m_Name
       value: barrel (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 5717728438152967912, guid: 710dbe037e64d8e4886a382c664c63be, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8752,6 +8880,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (11)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -9483,7 +9615,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.09280515
+      value: -0.09131265
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.y
@@ -9491,7 +9623,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.8135104
+      value: -1.8309605
       objectReference: {fileID: 0}
     - target: {fileID: 7248836673234217551, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_LocalRotation.w
@@ -9524,6 +9656,10 @@ PrefabInstance:
     - target: {fileID: 8057742517585801461, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
       propertyPath: m_Name
       value: wooden_box (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8057742517585801461, guid: 9c9377d1bd5693e4c89e5b7cef027e7c, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -9586,6 +9722,10 @@ PrefabInstance:
     - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
       propertyPath: m_Name
       value: column (9)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9007617704967520322, guid: eed13fc4a2efa8344894428b071f9bcc, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -9765,6 +9905,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: grave1
       objectReference: {fileID: 0}
+    - target: {fileID: 2320955264223594957, guid: 7a338d1532c348646b090f946a86d835, type: 3}
+      propertyPath: m_TagString
+      value: Props
+      objectReference: {fileID: 0}
     - target: {fileID: 3134048118114259831, guid: 7a338d1532c348646b090f946a86d835, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.62254
@@ -9866,6 +10010,10 @@ PrefabInstance:
     - target: {fileID: 7873938363213662076, guid: 0c5ff028744990943b239eaa0eefd85d, type: 3}
       propertyPath: m_Name
       value: grave2 (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7873938363213662076, guid: 0c5ff028744990943b239eaa0eefd85d, type: 3}
+      propertyPath: m_TagString
+      value: Props
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
