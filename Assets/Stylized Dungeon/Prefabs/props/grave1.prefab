@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4266400833818683416}
   m_Layer: 0
   m_Name: grave1
-  m_TagString: Untagged
+  m_TagString: Props
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
