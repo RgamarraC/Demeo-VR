@@ -1,0 +1,117 @@
+using UnityEngine;
+
+public class FichaRPG : MonoBehaviour
+{
+    [Header("Posicionamiento y Memoria")]
+    [SerializeField] private CasillaComponent casillaActual;
+    [SerializeField] private CasillaComponent casillaAnterior;
+    [SerializeField] private CasillaComponent casillaPrevisualizada;
+
+    [Header("Interacción y Física VR")]
+    [SerializeField] private bool estaSiendoSostenida;
+    [SerializeField] private LayerMask capaTablero;
+    [SerializeField] private Color colorPrevisualizacion = Color.yellow;
+
+    private void Update()
+    {
+        if (estaSiendoSostenida)
+        {
+            // Lanza el Raycast hacia abajo buscando casillas del tablero
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 10f, capaTablero))
+            {
+                CasillaComponent casillaDetectada = hit.collider.GetComponent<CasillaComponent>();
+
+                if (casillaDetectada != null)
+                {
+                    if (casillaPrevisualizada != null && casillaPrevisualizada != casillaDetectada)
+                    {
+                        casillaPrevisualizada.RestablecerColorOriginal();
+                    }
+
+                    casillaPrevisualizada = casillaDetectada;
+                    casillaPrevisualizada.CambiarColor(colorPrevisualizacion);
+                }
+            }
+            else
+            {
+                // Si salimos de la zona de casillas o el raycast no golpea nada
+                if (casillaPrevisualizada != null)
+                {
+                    casillaPrevisualizada.RestablecerColorOriginal();
+                    casillaPrevisualizada = null;
+                }
+            }
+        }
+    }
+
+    [ContextMenu("Levantar Ficha (Simular)")]
+    public void AlSerLevantada()
+    {
+        estaSiendoSostenida = true;
+        casillaAnterior = casillaActual;
+
+        if (casillaActual != null)
+        {
+            casillaActual.EstaOcupada = false;
+            casillaActual = null;
+        }
+    }
+
+    [ContextMenu("Soltar Ficha (Simular)")]
+    public void AlSerSoltada()
+    {
+        estaSiendoSostenida = false;
+
+        // Limpiamos el feedback visual previsualizado
+        if (casillaPrevisualizada != null)
+        {
+            casillaPrevisualizada.RestablecerColorOriginal();
+        }
+
+        // CANDADO DE SEGURIDAD: Evita gasto de AP por soltado en el mismo lugar o fuera del tablero
+        if (casillaPrevisualizada == casillaAnterior || casillaPrevisualizada == null)
+        {
+            if (casillaAnterior != null)
+            {
+                transform.position = casillaAnterior.ObtenerCentro();
+                casillaActual = casillaAnterior;
+                casillaActual.EstaOcupada = true;
+            }
+            
+            casillaPrevisualizada = null;
+            return; // Interrumpe y finaliza la lógica inmediatamente
+        }
+
+        // CANDADO DE SEGURIDAD (Extra): Si la casilla destino ya está ocupada
+        if (casillaPrevisualizada.EstaOcupada)
+        {
+            if (casillaAnterior != null)
+            {
+                transform.position = casillaAnterior.ObtenerCentro();
+                casillaActual = casillaAnterior;
+                casillaActual.EstaOcupada = true;
+            }
+            
+            casillaPrevisualizada = null;
+            return;
+        }
+
+        // Si es una casilla válida, aplicamos el movimiento final
+        ColocarEnCasilla(casillaPrevisualizada);
+        casillaPrevisualizada = null;
+    }
+
+    public void ColocarEnCasilla(CasillaComponent nuevaCasilla)
+    {
+        if (nuevaCasilla == null) return;
+
+        if (casillaActual != null)
+        {
+            casillaActual.EstaOcupada = false;
+        }
+
+        casillaActual = nuevaCasilla;
+        casillaActual.EstaOcupada = true;
+        transform.position = casillaActual.ObtenerCentro();
+    }
+}

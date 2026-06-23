@@ -1,10 +1,7 @@
 fileFormatVersion: 2
 guid: 45288819fde2143449a96207b14db0bb
-PrefabImporter:
-  externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+labels:
+- FusionPrefab
 AssetOrigin:
   serializedVersion: 1
   productId: 135227
@@ -12,3 +9,8 @@ AssetOrigin:
   packageVersion: 1.2
   assetPath: Assets/DogKnight/Prefab/DogPolyart.prefab
   uploadId: 347742
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
