@@ -24,8 +24,8 @@ namespace DemeoVR.Gameplay
         /// </summary>
         public override void TakeDamage(int physDmg, int magicDmg)
         {
-            int armor = statsBase != null ? statsBase.Armor : 0;
-            int magicRes = statsBase != null ? statsBase.MagicResistance : 0;
+            int armor = StatsBase != null ? StatsBase.Armor : 0;
+            int magicRes = StatsBase != null ? StatsBase.MagicResistance : 0;
 
             int finalPhysDmg = Mathf.Max(0, physDmg - armor);
             int finalMagicDmg = Mathf.Max(0, magicDmg - magicRes);
