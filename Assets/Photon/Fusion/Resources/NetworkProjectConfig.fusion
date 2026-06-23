@@ -36,7 +36,7 @@
         "ReliableDataTransferModes": 3
     },
     "HostMigration": {
-        "EnableAutoUpdate": false,
+        "EnableAutoUpdate": true,
         "UpdateDelay": 10
     },
     "EncryptionConfig": {
@@ -67,7 +67,8 @@
         "Assembly-CSharp",
         "Assembly-CSharp-firstpass",
         "Fusion.Addons.Physics",
-        "Fusion.Addons.FSM"
+        "Fusion.Addons.FSM",
+        "Meta.XR.MultiplayerBlocks.Fusion"
     ],
     "UseSerializableDictionary": true,
     "NullChecksForNetworkedProperties": true,
