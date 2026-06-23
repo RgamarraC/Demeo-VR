@@ -11,35 +11,19 @@ public class LobbyCallbacks : INetworkRunnerCallbacks
         this.lobby = lobby;
     }
 
-    // =========================
-    // JUGADORES
-    // =========================
-
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        lobby.RefreshUI();
+        lobby.HandlePlayerJoined(runner, player);
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
-        lobby.RefreshUI();
+        lobby.HandlePlayerLeft(runner, player);
     }
 
-    // =========================
-    // AOI (OBLIGATORIOS EN TU VERSION)
-    // =========================
+    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
 
-    public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-    }
-
-    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-    }
-
-    // =========================
-    // CALLBACKS OBLIGATORIOS (VACÍOS)
-    // =========================
+    public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
 
     public void OnInput(NetworkRunner runner, NetworkInput input) { }
 
@@ -61,7 +45,12 @@ public class LobbyCallbacks : INetworkRunnerCallbacks
 
     public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
 
-    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
+    public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken)
+    {
+        UnityEngine.Debug.Log("HOST MIGRATION DETECTADA EN CALLBACKS");
+
+        lobby.HandleHostMigration(runner, hostMigrationToken);
+    }
 
     public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, System.ArraySegment<byte> data) { }
 
