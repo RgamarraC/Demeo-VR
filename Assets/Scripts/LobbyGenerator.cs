@@ -3,6 +3,7 @@ using TMPro;
 using Fusion;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine.SceneManagement;
 
 public class LobbyGenerator : MonoBehaviour
 {
@@ -15,6 +16,7 @@ public class LobbyGenerator : MonoBehaviour
     [Header("TEXTOS LOBBY")]
     public TMP_Text textoCodigo;
     public TMP_Text textoJugadores;
+    public TMP_Text textoMensajeLobby;
 
     [Header("SLOTS")]
     public PlayerSlotUI slot1;
@@ -467,38 +469,47 @@ public class LobbyGenerator : MonoBehaviour
         slot.ActualizarSlot(nombre, rol);
     }
 
+    private void MostrarMensajeLobby(string mensaje)
+    {
+        Debug.LogWarning(mensaje);
+
+        if (textoMensajeLobby != null)
+            textoMensajeLobby.text = mensaje;
+    }
     
     public void RefreshUI()
-{
-    UpdateUI();
-}
+    {
+        UpdateUI();
+    }
 
 // ============================================================
 // BOTÓN START + VALIDACIÓN DE ROLES
 // ============================================================
 
-public void IniciarPartida()
-{
-    if (runner == null)
+    public void IniciarPartida()
     {
-        Debug.LogWarning("No hay sala activa.");
-        return;
-    }
+        if (runner == null)
+        {
+            MostrarMensajeLobby("No hay sala activa.");
+            return;
+        }
 
-    if (!runner.IsServer)
-    {
-        Debug.LogWarning("Solo el host puede iniciar.");
-        return;
-    }
+        if (!runner.IsServer)
+        {
+            MostrarMensajeLobby("Solo el host puede iniciar.");
+            return;
+        }
 
-    if (!RolesValidosParaIniciar(out string mensaje))
-    {
-        Debug.LogWarning(mensaje);
-        return;
-    }
+        if (!RolesValidosParaIniciar(out string mensaje))
+        {
+            MostrarMensajeLobby(mensaje);
+            return;
+        }
 
-    Debug.Log("Roles válidos. La partida puede iniciar.");
-}
+        MostrarMensajeLobby("Roles válidos. Cargando escena Test...");
+
+        SceneManager.LoadScene("Test");
+    }
 
 private bool RolesValidosParaIniciar(out string mensaje)
 {
