@@ -29,7 +29,7 @@ RenderSettings:
   m_SkyboxMaterial: {fileID: 2100000, guid: 95ebf50189f880e4aa17c4fdba9007aa, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
-  m_FlareFadeSpeed: 3
+  m_FlareFadeSpeed: 7.21
   m_HaloTexture: {fileID: 0}
   m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
   m_DefaultReflectionMode: 0
@@ -5407,7 +5407,6 @@ GameObject:
   m_Component:
   - component: {fileID: 399384017}
   - component: {fileID: 399384019}
-  - component: {fileID: 399384018}
   m_Layer: 0
   m_Name: Reflection Probe
   m_TagString: Untagged
@@ -5430,18 +5429,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 360580954}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &399384018
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 399384016}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0ef8dc2c2eabfa4e8cb77be57a837c0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!215 &399384019
 ReflectionProbe:
   m_ObjectHideFlags: 0
@@ -9253,7 +9240,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: Lights
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4983269753116375784, guid: 18ded3322d26c39489a8e0fdd14cd24f, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

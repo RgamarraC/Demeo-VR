@@ -14,6 +14,7 @@ public class JoinLobbyUI : MonoBehaviour
     public static string codigoIngresado;
 
     private NetworkRunner runner;
+    private GameObject runnerObject;
     private bool conectando = false;
 
     public async void EntrarSala()
@@ -52,14 +53,26 @@ public class JoinLobbyUI : MonoBehaviour
             // Siempre limpiamos cualquier runner viejo antes de entrar.
             await LimpiarRunnerLocal();
 
-            runner = gameObject.AddComponent<NetworkRunner>();
+            // Creamos un objeto separado SOLO para el NetworkRunner del invitado.
+            runnerObject = new GameObject("LobbyNetworkRunner_Client");
+
+            // IMPORTANTE: que sobreviva al cambio de escena hacia Test.
+            DontDestroyOnLoad(runnerObject);
+
+            runner = runnerObject.AddComponent<NetworkRunner>();
+            runner.ProvideInput = true;
+
+            // El SceneManager de Fusion también debe vivir junto al runner.
+            NetworkSceneManagerDefault fusionSceneManager =
+                runnerObject.AddComponent<NetworkSceneManagerDefault>();
 
             Debug.Log("Intentando entrar a sala: " + codigoIngresado);
 
             var result = await runner.StartGame(new StartGameArgs()
             {
                 GameMode = GameMode.Client,
-                SessionName = codigoIngresado
+                SessionName = codigoIngresado,
+                SceneManager = fusionSceneManager
             });
 
             if (result.Ok)
@@ -73,6 +86,7 @@ public class JoinLobbyUI : MonoBehaviour
                 // JoinLobbyUI ya no se queda con este runner.
                 // Desde ahora lo manejará LobbyGenerator.
                 runner = null;
+                runnerObject = null;
 
                 lobbyGenerator.ConfigurarComoInvitado(
                     runnerConectado,
@@ -101,8 +115,12 @@ public class JoinLobbyUI : MonoBehaviour
             runner = null;
 
             await runnerParaCerrar.Shutdown();
+        }
 
-            Destroy(runnerParaCerrar);
+        if (runnerObject != null)
+        {
+            Destroy(runnerObject);
+            runnerObject = null;
         }
     }
 }

@@ -58,5 +58,13 @@ public class LobbyCallbacks : INetworkRunnerCallbacks
 
     public void OnSceneLoadDone(NetworkRunner runner) { }
 
-    public void OnSceneLoadStart(NetworkRunner runner) { }
+    public void OnSceneLoadStart(NetworkRunner runner)
+    {
+        UnityEngine.Debug.Log("CACHE GAMEPLAY: Guardando datos antes de cambiar de escena.");
+
+        if (lobby != null)
+        {
+            lobby.GuardarDatosParaGameplay();
+        }
+    }
 }

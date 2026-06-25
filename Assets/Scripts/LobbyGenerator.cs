@@ -53,9 +53,18 @@ public class LobbyGenerator : MonoBehaviour
 
         codigoLobby = Random.Range(1000, 10000).ToString();
 
-        // Creamos un objeto temporal SOLO para el NetworkRunner.
+       // Creamos un objeto temporal SOLO para el NetworkRunner.
         GameObject runnerObject = new GameObject("LobbyNetworkRunner");
+
+        // IMPORTANTE: que el runner sobreviva al cambio de escena
+        DontDestroyOnLoad(runnerObject);
+
         runner = runnerObject.AddComponent<NetworkRunner>();
+        runner.ProvideInput = true;
+
+        // El SceneManager de Fusion también debe vivir en el mismo objeto del runner
+        NetworkSceneManagerDefault fusionSceneManager =
+            runnerObject.AddComponent<NetworkSceneManagerDefault>();
 
         destruirRunnerGameObjectAlCerrar = true;
 
@@ -68,7 +77,8 @@ public class LobbyGenerator : MonoBehaviour
         {
             GameMode = GameMode.Host,
             SessionName = codigoLobby,
-            PlayerCount = 3
+            PlayerCount = 3,
+            SceneManager = fusionSceneManager
         });
 
         if (!result.Ok)
@@ -456,6 +466,8 @@ public class LobbyGenerator : MonoBehaviour
         ActualizarSlotSeguro(slot1, nombres[0], roles[0]);
         ActualizarSlotSeguro(slot2, nombres[1], roles[1]);
         ActualizarSlotSeguro(slot3, nombres[2], roles[2]);
+
+        GuardarDatosParaGameplay(false);
     }
 
     private void ActualizarSlotSeguro(PlayerSlotUI slot, string nombre, string rol)
@@ -508,7 +520,15 @@ public class LobbyGenerator : MonoBehaviour
 
         MostrarMensajeLobby("Roles válidos. Cargando escena Test...");
 
-        SceneManager.LoadScene("Test");
+        int testSceneIndex = SceneUtility.GetBuildIndexByScenePath("Assets/Scenes/Test.unity");
+
+        if (testSceneIndex < 0)
+        {
+            MostrarMensajeLobby("La escena Test no está en Build Settings.");
+            return;
+        }
+
+        runner.LoadScene(SceneRef.FromIndex(testSceneIndex), LoadSceneMode.Single);
     }
 
 private bool RolesValidosParaIniciar(out string mensaje)
@@ -597,23 +617,102 @@ private string NormalizarRol(string rol)
         .Replace("ú", "u");
 }
 
-public async void SalirLobby()
-{
-    await LimpiarRunnerActual();
+    public async void SalirLobby()
+    {
+        await LimpiarRunnerActual();
 
-    codigoLobby = "";
-    hostName = "";
+        codigoLobby = "";
+        hostName = "";
 
-    ActualizarSlotSeguro(slot1, "Vacío", "-");
-    ActualizarSlotSeguro(slot2, "Vacío", "-");
-    ActualizarSlotSeguro(slot3, "Vacío", "-");
+        ActualizarSlotSeguro(slot1, "Vacío", "-");
+        ActualizarSlotSeguro(slot2, "Vacío", "-");
+        ActualizarSlotSeguro(slot3, "Vacío", "-");
 
-    if (textoJugadores != null)
-        textoJugadores.text = "0/3";
+        if (textoJugadores != null)
+            textoJugadores.text = "0/3";
 
-    if (textoCodigo != null)
-        textoCodigo.text = "";
-}
+        if (textoCodigo != null)
+            textoCodigo.text = "";
+    }
+
+    // AQUÍ VA
+    public void GuardarDatosParaGameplay(bool mostrarLogs = true)
+    {
+        LobbyPlayerData[] players =
+            FindObjectsByType<LobbyPlayerData>(FindObjectsSortMode.None);
+
+        List<GameplayRoleCache.PlayerInfo> nuevosDatos =
+            new List<GameplayRoleCache.PlayerInfo>();
+
+        foreach (LobbyPlayerData data in players)
+        {
+            if (data == null)
+                continue;
+
+            if (data.Object == null)
+                continue;
+
+            PlayerRef playerRef = data.Owner;
+
+            if (playerRef == PlayerRef.None)
+                playerRef = data.Object.InputAuthority;
+
+            string nombre = data.PlayerName.ToString();
+            string rol = data.PlayerRole.ToString();
+
+            if (string.IsNullOrEmpty(nombre))
+                nombre = "Player";
+
+            if (string.IsNullOrEmpty(rol))
+                rol = "Sin rol";
+
+            nuevosDatos.Add(new GameplayRoleCache.PlayerInfo
+            {
+                PlayerRef = playerRef,
+                PlayerName = nombre,
+                PlayerRole = rol
+            });
+        }
+
+        // Importante:
+        // Si en algún momento no encuentra LobbyPlayerData,
+        // NO borramos el cache anterior.
+        if (nuevosDatos.Count == 0)
+        {
+            if (mostrarLogs)
+            {
+                Debug.LogWarning(
+                    "CACHE GAMEPLAY: No se encontraron LobbyPlayerData. Se mantiene el cache anterior: " +
+                    GameplayRoleCache.Players.Count
+                );
+            }
+
+            return;
+        }
+
+        GameplayRoleCache.Clear();
+
+        foreach (GameplayRoleCache.PlayerInfo info in nuevosDatos)
+        {
+            GameplayRoleCache.Add(info.PlayerRef, info.PlayerName, info.PlayerRole);
+
+            if (mostrarLogs)
+            {
+                Debug.Log(
+                    "CACHE GAMEPLAY: Guardado | PlayerRef = " +
+                    info.PlayerRef +
+                    " | Nombre = " +
+                    info.PlayerName +
+                    " | Rol = " +
+                    info.PlayerRole
+                );
+            }
+        }
+
+        if (mostrarLogs)
+            Debug.Log("CACHE GAMEPLAY: Total guardados = " + GameplayRoleCache.Players.Count);
+    }
+
     private async Task LimpiarRunnerActual()
     {
         NetworkRunner runnerParaCerrar = runner;
