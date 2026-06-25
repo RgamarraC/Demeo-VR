@@ -2469,6 +2469,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 6
       objectReference: {fileID: 0}
+    - target: {fileID: 8588840791909216705, guid: b37d5598ee14b764f84342fbb1b98a46, type: 3}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8600314280529686150, guid: b37d5598ee14b764f84342fbb1b98a46, type: 3}
       propertyPath: m_Layer
       value: 6
