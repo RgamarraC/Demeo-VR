@@ -18,6 +18,39 @@ public class GridManager : MonoBehaviour
     private void Start()
     {
         EscanearTablero();
+        DesplegarHeroesEnSpawns();
+    }
+
+    /// <summary>
+    /// Devuelve true si el destino está dentro de un círculo matemático en una grilla cuadrada.
+    /// Usa la fórmula de la distancia al cuadrado (Pitágoras) usando solo enteros para evitar problemas de precisión flotante.
+    /// </summary>
+    public bool EsCasillaEnRangoCircularGrid(Vector2Int origen, Vector2Int destino, int rangoMaximo)
+    {
+        int dx = Mathf.Abs(origen.x - destino.x);
+        int dy = Mathf.Abs(origen.y - destino.y);
+        return (dx * dx) + (dy * dy) <= (rangoMaximo * rangoMaximo);
+    }
+
+    private void DesplegarHeroesEnSpawns()
+    {
+        // En Unity 2023+, FindObjectsByType es la forma optimizada
+        FichaRPG[] heroes = Object.FindObjectsByType<FichaRPG>(FindObjectsSortMode.None);
+        
+        // Obtenemos solo las casillas marcadas como spawn de héroes
+        var casillasSpawn = diccionarioCasillas.Values.Where(c => c.EsSpawnHeroe).ToList();
+
+        for (int i = 0; i < heroes.Length; i++)
+        {
+            if (i < casillasSpawn.Count)
+            {
+                heroes[i].ColocarEnCasilla(casillasSpawn[i]);
+            }
+            else
+            {
+                Debug.LogWarning($"[GridManager] No hay suficientes casillas de spawn para el héroe {heroes[i].gameObject.name}.");
+            }
+        }
     }
 
     [ContextMenu("Escanear Tablero")]

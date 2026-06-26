@@ -11,6 +11,18 @@ public class FichaRPG : MonoBehaviour
     [SerializeField] private bool estaSiendoSostenida;
     [SerializeField] private LayerMask capaTablero;
     [SerializeField] private Color colorPrevisualizacion = Color.yellow;
+    
+    [Header("Restricciones")]
+    public int rangoMovimiento = 3;
+
+    private Rigidbody rb;
+    private GridManager gridManager;
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+        gridManager = FindFirstObjectByType<GridManager>();
+    }
 
     private void Update()
     {
@@ -21,7 +33,13 @@ public class FichaRPG : MonoBehaviour
             {
                 CasillaComponent casillaDetectada = hit.collider.GetComponent<CasillaComponent>();
 
-                if (casillaDetectada != null)
+                bool enRango = false;
+                if (gridManager != null && casillaAnterior != null && casillaDetectada != null)
+                {
+                    enRango = gridManager.EsCasillaEnRangoCircularGrid(casillaAnterior.CoordenadaGrid, casillaDetectada.CoordenadaGrid, rangoMovimiento);
+                }
+
+                if (casillaDetectada != null && !casillaDetectada.EstaOcupada && enRango)
                 {
                     if (casillaPrevisualizada != null && casillaPrevisualizada != casillaDetectada)
                     {
@@ -31,10 +49,19 @@ public class FichaRPG : MonoBehaviour
                     casillaPrevisualizada = casillaDetectada;
                     casillaPrevisualizada.CambiarColor(colorPrevisualizacion);
                 }
+                else
+                {
+                    // Si salimos de la zona de casillas, el raycast no golpea nada, o la casilla ESTÁ OCUPADA
+                    if (casillaPrevisualizada != null)
+                    {
+                        casillaPrevisualizada.RestablecerColorOriginal();
+                        casillaPrevisualizada = null;
+                    }
+                }
             }
             else
             {
-                // Si salimos de la zona de casillas o el raycast no golpea nada
+                // Si el raycast no golpea absolutamente nada
                 if (casillaPrevisualizada != null)
                 {
                     casillaPrevisualizada.RestablecerColorOriginal();
@@ -47,6 +74,8 @@ public class FichaRPG : MonoBehaviour
     [ContextMenu("Levantar Ficha (Simular)")]
     public void AlSerLevantada()
     {
+        if (rb != null) rb.isKinematic = false;
+
         estaSiendoSostenida = true;
         casillaAnterior = casillaActual;
 
@@ -74,6 +103,9 @@ public class FichaRPG : MonoBehaviour
             if (casillaAnterior != null)
             {
                 transform.position = casillaAnterior.ObtenerCentro();
+                transform.rotation = Quaternion.identity; // Enderezar ficha al volver
+                if (rb != null) rb.isKinematic = true;    // Anular fuerzas físicas residuales
+                
                 casillaActual = casillaAnterior;
                 casillaActual.EstaOcupada = true;
             }
@@ -82,12 +114,21 @@ public class FichaRPG : MonoBehaviour
             return; // Interrumpe y finaliza la lógica inmediatamente
         }
 
-        // CANDADO DE SEGURIDAD (Extra): Si la casilla destino ya está ocupada
-        if (casillaPrevisualizada.EstaOcupada)
+        // CANDADO DE SEGURIDAD (Extra): Si la casilla destino ya está ocupada o fuera de rango
+        bool fueraDeRango = false;
+        if (gridManager != null && casillaAnterior != null && casillaPrevisualizada != null)
+        {
+            fueraDeRango = !gridManager.EsCasillaEnRangoCircularGrid(casillaAnterior.CoordenadaGrid, casillaPrevisualizada.CoordenadaGrid, rangoMovimiento);
+        }
+
+        if (casillaPrevisualizada.EstaOcupada || fueraDeRango)
         {
             if (casillaAnterior != null)
             {
                 transform.position = casillaAnterior.ObtenerCentro();
+                transform.rotation = Quaternion.identity; // Enderezar ficha al volver
+                if (rb != null) rb.isKinematic = true;    // Anular fuerzas físicas residuales
+                
                 casillaActual = casillaAnterior;
                 casillaActual.EstaOcupada = true;
             }
@@ -112,6 +153,10 @@ public class FichaRPG : MonoBehaviour
 
         casillaActual = nuevaCasilla;
         casillaActual.EstaOcupada = true;
+        
         transform.position = casillaActual.ObtenerCentro();
+        transform.rotation = Quaternion.identity; // Restablecer rotación para que quede perfectamente derecha
+
+        if (rb != null) rb.isKinematic = true;
     }
 }

@@ -11,6 +11,9 @@ public class CasillaComponent : MonoBehaviour
     [Header("Configuración de Spawn")]
     [SerializeField] private bool esSpawnHeroe;
 
+    [Header("Feedback Visual")]
+    [SerializeField] private GameObject efectoLuzSeleccion;
+
     private MeshRenderer meshRenderer;
 
     // Propiedades públicas
@@ -36,6 +39,11 @@ public class CasillaComponent : MonoBehaviour
             
             meshRenderer.SetPropertyBlock(propBlock);
         }
+
+        if (efectoLuzSeleccion != null)
+        {
+            efectoLuzSeleccion.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -49,6 +57,11 @@ public class CasillaComponent : MonoBehaviour
         if (meshRenderer != null)
         {
             meshRenderer.SetPropertyBlock(null);
+        }
+
+        if (efectoLuzSeleccion != null)
+        {
+            efectoLuzSeleccion.SetActive(false);
         }
     }
 
