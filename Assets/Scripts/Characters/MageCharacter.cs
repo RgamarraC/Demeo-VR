@@ -4,9 +4,9 @@ namespace DemeoVR.Gameplay
 {
     /// <summary>
     /// Enfocado en daño a distancia y control de área.
-    /// Hereda de CharacterBase y añade mecánicas de amplificación del daño mágico.
+    /// Hereda de BoardPiece y añade mecánicas de amplificación del daño mágico.
     /// </summary>
-    public class MageCharacter : CharacterBase
+    public class MageCharacter : BoardPiece
     {
         [Header("Mecánicas del Mago")]
         [Tooltip("Multiplicador actual del daño mágico (1.0 = 100%).")]
@@ -34,7 +34,7 @@ namespace DemeoVR.Gameplay
         /// </summary>
         public int GetModifiedMagicDamage()
         {
-            int baseMagicDmg = StatsBase != null ? StatsBase.MagicDamage : 0;
+            int baseMagicDmg = baseData != null ? baseData.magicDamage : 0;
             return Mathf.RoundToInt(baseMagicDmg * SpellPowerMultiplier);
         }
 

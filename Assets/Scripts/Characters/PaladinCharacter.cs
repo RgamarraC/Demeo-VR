@@ -4,9 +4,9 @@ namespace DemeoVR.Gameplay
 {
     /// <summary>
     /// Especialista en resistencia y combate cuerpo a cuerpo.
-    /// Hereda de CharacterBase y añade soporte para mitigación de daño mejorada mediante escudos de absorción.
+    /// Hereda de BoardPiece y añade soporte para mitigación de daño mejorada mediante escudos de absorción.
     /// </summary>
-    public class PaladinCharacter : CharacterBase
+    public class PaladinCharacter : BoardPiece
     {
         [Header("Mecánicas del Paladín")]
         [Tooltip("Escudo de absorción de daño actual. Actúa como puntos de salud temporales.")]
@@ -24,8 +24,8 @@ namespace DemeoVR.Gameplay
         /// </summary>
         public override void TakeDamage(int physDmg, int magicDmg)
         {
-            int armor = StatsBase != null ? StatsBase.Armor : 0;
-            int magicRes = StatsBase != null ? StatsBase.MagicResistance : 0;
+            int armor = baseData != null ? baseData.armor : 0;
+            int magicRes = baseData != null ? baseData.magicResistance : 0;
 
             int finalPhysDmg = Mathf.Max(0, physDmg - armor);
             int finalMagicDmg = Mathf.Max(0, magicDmg - magicRes);
@@ -48,10 +48,10 @@ namespace DemeoVR.Gameplay
             }
 
             // Aplicar el daño restante a la vida
-            CurrentHP -= totalDamage;
-            Debug.Log($"[{gameObject.name}] Daño directo recibido: {totalDamage}. HP actual: {CurrentHP}");
+            CurrentHealth -= totalDamage;
+            Debug.Log($"[{gameObject.name}] Daño directo recibido: {totalDamage}. HP actual: {CurrentHealth}");
 
-            if (CurrentHP <= 0)
+            if (CurrentHealth <= 0)
             {
                 Die();
             }
