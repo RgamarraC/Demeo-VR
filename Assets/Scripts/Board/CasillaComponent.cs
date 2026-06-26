@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class CasillaComponent : MonoBehaviour
 {
@@ -20,6 +21,12 @@ public class CasillaComponent : MonoBehaviour
     public Vector2Int CoordenadaGrid { get => coordenadaGrid; set => coordenadaGrid = value; }
     public bool EstaOcupada { get => estaOcupada; set => estaOcupada = value; }
     public bool EsSpawnHeroe => esSpawnHeroe;
+
+    [Header("Muros y Fronteras (Bake)")]
+    public bool muroAlNorte = false;
+    public bool muroAlSur = false;
+    public bool muroAlEste = false;
+    public bool muroAlOeste = false;
 
     private void Awake()
     {
@@ -46,6 +53,22 @@ public class CasillaComponent : MonoBehaviour
         }
     }
 
+    public void ActivarEfectoLuz()
+    {
+        if (efectoLuzSeleccion != null)
+        {
+            efectoLuzSeleccion.SetActive(true);
+        }
+    }
+
+    public void DesactivarEfectoLuz()
+    {
+        if (efectoLuzSeleccion != null)
+        {
+            efectoLuzSeleccion.SetActive(false);
+        }
+    }
+
     /// <summary>
     /// Restablece el color al estado base del material (gris original).
     /// Al borrar el bloque de propiedades (null), el MeshRenderer vuelve automáticamente
@@ -58,11 +81,7 @@ public class CasillaComponent : MonoBehaviour
         {
             meshRenderer.SetPropertyBlock(null);
         }
-
-        if (efectoLuzSeleccion != null)
-        {
-            efectoLuzSeleccion.SetActive(false);
-        }
+        // Nota: La luz de selección ahora se apaga independientemente mediante DesactivarEfectoLuz()
     }
 
     public Vector3 ObtenerCentro()

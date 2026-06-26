@@ -11,14 +11,14 @@ namespace DemeoVR.Gameplay
     {
         [Header("Personaje Controlado")]
         [Tooltip("La miniatura o ficha del tablero que este jugador humano maneja.")]
-        [SerializeField] private CharacterBase controlledCharacter;
+        [SerializeField] private BoardPiece controlledCharacter;
 
         [Header("Mano del Jugador")]
         [Tooltip("Listado de cartas que el jugador tiene actualmente en su mano virtual.")]
         [SerializeField] private List<CardData> handOfCards = new List<CardData>();
 
         #region Propiedades Públicas
-        public CharacterBase ControlledCharacter
+        public BoardPiece ControlledCharacter
         {
             get => controlledCharacter;
             set => controlledCharacter = value;
@@ -43,7 +43,7 @@ namespace DemeoVR.Gameplay
             }
             else
             {
-                Debug.LogWarning($"[{gameObject.name}] ¡Alerta! El jugador héroe no tiene asignada ninguna miniatura (CharacterBase) al iniciar su turno.");
+                Debug.LogWarning($"[{gameObject.name}] ¡Alerta! El jugador héroe no tiene asignada ninguna miniatura (BoardPiece) al iniciar su turno.");
             }
         }
         #endregion
@@ -52,7 +52,7 @@ namespace DemeoVR.Gameplay
         /// <summary>
         /// Intenta jugar una carta desde la mano VR sobre un personaje objetivo en el tablero.
         /// </summary>
-        public bool PlayCard(CardData card, CharacterBase target)
+        public bool PlayCard(CardData card, BoardPiece target)
         {
             if (!isMyTurn)
             {
@@ -80,7 +80,7 @@ namespace DemeoVR.Gameplay
             return true;
         }
 
-        private void ApplyCardEffects(CardData card, CharacterBase target)
+        private void ApplyCardEffects(CardData card, BoardPiece target)
         {
             // Daño
             if (card.PhysicalDamage > 0 || card.MagicDamage > 0)

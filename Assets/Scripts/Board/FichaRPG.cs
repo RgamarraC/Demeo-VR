@@ -10,10 +10,14 @@ public class FichaRPG : MonoBehaviour
     [Header("Interacción y Física VR")]
     [SerializeField] private bool estaSiendoSostenida;
     [SerializeField] private LayerMask capaTablero;
-    [SerializeField] private Color colorPrevisualizacion = Color.yellow;
+    [SerializeField] private Color colorPrevisualizacion = Color.green;
     
     [Header("Restricciones")]
     public int rangoMovimiento = 3;
+
+    [Header("Propiedad y Turnos")]
+    [Tooltip("Valores válidos: 'Heroe 1', 'Heroe 2', 'Dungeon Master'")]
+    [SerializeField] private string rolPropietario;
 
     private Rigidbody rb;
     private GridManager gridManager;
@@ -33,17 +37,17 @@ public class FichaRPG : MonoBehaviour
             {
                 CasillaComponent casillaDetectada = hit.collider.GetComponent<CasillaComponent>();
 
-                bool enRango = false;
-                if (gridManager != null && casillaAnterior != null && casillaDetectada != null)
+                bool permitida = false;
+                if (gridManager != null && casillaDetectada != null)
                 {
-                    enRango = gridManager.EsCasillaEnRangoCircularGrid(casillaAnterior.CoordenadaGrid, casillaDetectada.CoordenadaGrid, rangoMovimiento);
+                    permitida = gridManager.EsCasillaValida(casillaDetectada);
                 }
 
-                if (casillaDetectada != null && !casillaDetectada.EstaOcupada && enRango)
+                if (casillaDetectada != null && permitida)
                 {
                     if (casillaPrevisualizada != null && casillaPrevisualizada != casillaDetectada)
                     {
-                        casillaPrevisualizada.RestablecerColorOriginal();
+                        casillaPrevisualizada.CambiarColor(gridManager.ColorRangoIluminado);
                     }
 
                     casillaPrevisualizada = casillaDetectada;
@@ -54,7 +58,7 @@ public class FichaRPG : MonoBehaviour
                     // Si salimos de la zona de casillas, el raycast no golpea nada, o la casilla ESTÁ OCUPADA
                     if (casillaPrevisualizada != null)
                     {
-                        casillaPrevisualizada.RestablecerColorOriginal();
+                        casillaPrevisualizada.CambiarColor(gridManager.ColorRangoIluminado);
                         casillaPrevisualizada = null;
                     }
                 }
@@ -64,7 +68,7 @@ public class FichaRPG : MonoBehaviour
                 // Si el raycast no golpea absolutamente nada
                 if (casillaPrevisualizada != null)
                 {
-                    casillaPrevisualizada.RestablecerColorOriginal();
+                    casillaPrevisualizada.CambiarColor(gridManager.ColorRangoIluminado);
                     casillaPrevisualizada = null;
                 }
             }
@@ -74,6 +78,26 @@ public class FichaRPG : MonoBehaviour
     [ContextMenu("Levantar Ficha (Simular)")]
     public void AlSerLevantada()
     {
+        // === VALIDACIÓN MULTIJUGADOR ===
+        // Bypass para Test Local: Si existe GameplayManager y TurnManager, verificamos las reglas de red
+        if (GameplayManager.Instance != null && TurnManager.Instance != null)
+        {
+            // 1. ¿Es mi turno?
+            if (!TurnManager.Instance.IsMyTurn())
+            {
+                Debug.LogWarning($"[FichaRPG] Movimiento cancelado. No es tu turno.");
+                return;
+            }
+
+            // 2. ¿Soy el dueño de esta ficha?
+            if (rolPropietario != GameplayManager.Instance.LocalPlayerRole)
+            {
+                Debug.LogWarning($"[FichaRPG] Agarre cancelado. Esta ficha le pertenece al rol: {rolPropietario}. Tu rol es: {GameplayManager.Instance.LocalPlayerRole}.");
+                return;
+            }
+        }
+        // ===============================
+
         if (rb != null) rb.isKinematic = false;
 
         estaSiendoSostenida = true;
@@ -84,6 +108,11 @@ public class FichaRPG : MonoBehaviour
             casillaActual.EstaOcupada = false;
             casillaActual = null;
         }
+
+        if (GridManager.Instance != null && casillaAnterior != null)
+        {
+            GridManager.Instance.MostrarRangoMovimiento(casillaAnterior, rangoMovimiento);
+        }
     }
 
     [ContextMenu("Soltar Ficha (Simular)")]
@@ -91,37 +120,21 @@ public class FichaRPG : MonoBehaviour
     {
         estaSiendoSostenida = false;
 
-        // Limpiamos el feedback visual previsualizado
-        if (casillaPrevisualizada != null)
+        // CANDADO DE SEGURIDAD: Guardar la validación ANTES de ocultar el rango (porque Ocultar limpia la lista)
+        bool casillaInvalida = true;
+        if (gridManager != null && casillaPrevisualizada != null)
         {
-            casillaPrevisualizada.RestablecerColorOriginal();
+            casillaInvalida = !gridManager.EsCasillaValida(casillaPrevisualizada);
         }
 
-        // CANDADO DE SEGURIDAD: Evita gasto de AP por soltado en el mismo lugar o fuera del tablero
-        if (casillaPrevisualizada == casillaAnterior || casillaPrevisualizada == null)
+        // Apagamos el tablero visualmente
+        if (GridManager.Instance != null)
         {
-            if (casillaAnterior != null)
-            {
-                transform.position = casillaAnterior.ObtenerCentro();
-                transform.rotation = Quaternion.identity; // Enderezar ficha al volver
-                if (rb != null) rb.isKinematic = true;    // Anular fuerzas físicas residuales
-                
-                casillaActual = casillaAnterior;
-                casillaActual.EstaOcupada = true;
-            }
-            
-            casillaPrevisualizada = null;
-            return; // Interrumpe y finaliza la lógica inmediatamente
+            GridManager.Instance.OcultarRangoMovimiento();
         }
 
-        // CANDADO DE SEGURIDAD (Extra): Si la casilla destino ya está ocupada o fuera de rango
-        bool fueraDeRango = false;
-        if (gridManager != null && casillaAnterior != null && casillaPrevisualizada != null)
-        {
-            fueraDeRango = !gridManager.EsCasillaEnRangoCircularGrid(casillaAnterior.CoordenadaGrid, casillaPrevisualizada.CoordenadaGrid, rangoMovimiento);
-        }
-
-        if (casillaPrevisualizada.EstaOcupada || fueraDeRango)
+        // Si es inválida, ocupada, soltada en el aire o en su propio sitio, vuelve al origen
+        if (casillaPrevisualizada == casillaAnterior || casillaPrevisualizada == null || casillaPrevisualizada.EstaOcupada || casillaInvalida)
         {
             if (casillaAnterior != null)
             {
