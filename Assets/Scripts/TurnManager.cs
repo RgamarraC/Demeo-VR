@@ -21,6 +21,8 @@ public class TurnManager : NetworkBehaviour
     private bool listo = false;
     private int ultimoTurnoMostrado = -1;
 
+    private float debugTimer = 0f;
+
     private void Awake()
     {
         Instance = this;
@@ -59,9 +61,14 @@ public class TurnManager : NetworkBehaviour
     private void Update()
     {
         if (!listo)
-            return;
+        {
+            IntentarInicializarLocal();
 
-        // Si el turno cambió en red, actualizamos UI
+            if (!listo)
+                return;
+        }
+
+        // Si el turno cambió en red, actualizamos datos del turno
         if (ultimoTurnoMostrado != CurrentTurnIndex)
         {
             ActualizarTurnoActual();
@@ -103,10 +110,45 @@ public class TurnManager : NetworkBehaviour
         );
     }
 
+    private void IntentarInicializarLocal()
+    {
+        if (listo)
+            return;
+
+        if (GameplayManager.Instance == null)
+            return;
+
+        gameplayManager = GameplayManager.Instance;
+
+        if (gameplayManager.TurnOrder == null || gameplayManager.TurnOrder.Count == 0)
+            return;
+
+        listo = true;
+        ultimoTurnoMostrado = -999;
+
+        ActualizarTurnoActual();
+
+        Debug.Log(
+            "TURN MANAGER NETWORK: Inicializado localmente | LocalPlayer = " +
+            gameplayManager.LocalPlayerRef +
+            " | Rol = " +
+            gameplayManager.LocalPlayerRole +
+            " | CurrentTurnIndex = " +
+            CurrentTurnIndex +
+            " | StateAuthority = " +
+            Object.HasStateAuthority
+        );
+    }
+
     public bool IsMyTurn()
     {
         if (!listo)
-            return false;
+        {
+            IntentarInicializarLocal();
+
+            if (!listo)
+                return false;
+        }
 
         if (gameplayManager == null)
             return false;
@@ -119,7 +161,10 @@ public class TurnManager : NetworkBehaviour
         if (index < 0 || index >= gameplayManager.TurnOrder.Count)
             index = 0;
 
-        return gameplayManager.LocalPlayerRef == gameplayManager.TurnOrder[index].PlayerRef;
+        PlayerRef jugadorDelTurno =
+            gameplayManager.TurnOrder[index].PlayerRef;
+
+        return gameplayManager.LocalPlayerRef == jugadorDelTurno;
     }
 
     public void EndTurn()
