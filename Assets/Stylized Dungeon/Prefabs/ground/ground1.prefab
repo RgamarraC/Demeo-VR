@@ -129,7 +129,8 @@ MonoBehaviour:
   coordenadaGrid: {x: 0, y: 0}
   estaOcupada: 0
   esSpawnHeroe: 0
-  efectoLuzSeleccion: {fileID: 9086857928373836291}
+  quadRenderer: {fileID: 393869398294330681}
+  valorBitmask: 0
 --- !u!1 &9086857928373836291
 GameObject:
   m_ObjectHideFlags: 0

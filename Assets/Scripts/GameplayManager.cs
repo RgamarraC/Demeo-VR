@@ -29,7 +29,7 @@ public class GameplayManager : MonoBehaviour
 
         if (runner == null)
         {
-            Debug.LogError("GAMEPLAY MANAGER: No se encontró NetworkRunner en Test.");
+            Debug.Log("GAMEPLAY MANAGER: No se encontró NetworkRunner en Test.");
             yield break;
         }
 

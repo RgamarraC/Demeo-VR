@@ -3,89 +3,98 @@ using System.Collections.Generic;
 
 public class CasillaComponent : MonoBehaviour
 {
-    [Header("Coordenadas")]
-    [SerializeField] private Vector2Int coordenadaGrid;
-    
+    [Header("Configuración Manual")]
+    public int coordenadaX;
+    public int coordenadaZ;
+    public int valorBitmask;
+
     [Header("Estado")]
-    [SerializeField] private bool estaOcupada;
-    
-    [Header("Configuración de Spawn")]
-    [SerializeField] private bool esSpawnHeroe;
+    public bool estaOcupada;
+    public bool esObstaculo;
+    public bool esSpawnHeroe;
 
     [Header("Feedback Visual")]
-    [SerializeField] private GameObject efectoLuzSeleccion;
+    [SerializeField] private MeshRenderer quadRenderer;
 
-    private MeshRenderer meshRenderer;
-
-    // Propiedades públicas
-    public Vector2Int CoordenadaGrid { get => coordenadaGrid; set => coordenadaGrid = value; }
-    public bool EstaOcupada { get => estaOcupada; set => estaOcupada = value; }
-    public bool EsSpawnHeroe => esSpawnHeroe;
-
-    [Header("Muros y Fronteras (Bake)")]
-    public bool muroAlNorte = false;
-    public bool muroAlSur = false;
-    public bool muroAlEste = false;
-    public bool muroAlOeste = false;
-
-    private void Awake()
+    public void SetearEstadoVisual(string estado)
     {
-        meshRenderer = GetComponent<MeshRenderer>();
-    }
+        if (quadRenderer == null) return;
 
-    public void CambiarColor(Color nuevoColor)
-    {
-        if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer != null)
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
+        quadRenderer.GetPropertyBlock(propBlock);
+
+        switch (estado)
         {
-            MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
-            meshRenderer.GetPropertyBlock(propBlock);
-            
-            propBlock.SetColor("_Color", nuevoColor); 
-            propBlock.SetColor("_BaseColor", nuevoColor);
-            
-            meshRenderer.SetPropertyBlock(propBlock);
+            case "Apagado":
+                if (esSpawnHeroe)
+                {
+                    quadRenderer.gameObject.SetActive(true);
+                    propBlock.SetColor("_Color", Color.green);
+                    propBlock.SetColor("_BaseColor", Color.green);
+                }
+                else
+                {
+                    quadRenderer.gameObject.SetActive(false);
+                }
+                break;
+            case "EnRango":
+                quadRenderer.gameObject.SetActive(true);
+                propBlock.SetColor("_Color", Color.yellow);
+                propBlock.SetColor("_BaseColor", Color.yellow);
+                break;
+            case "Hover":
+                quadRenderer.gameObject.SetActive(true);
+                propBlock.SetColor("_Color", Color.blue);
+                propBlock.SetColor("_BaseColor", Color.blue);
+                break;
         }
 
-        if (efectoLuzSeleccion != null)
-        {
-            efectoLuzSeleccion.SetActive(true);
-        }
-    }
-
-    public void ActivarEfectoLuz()
-    {
-        if (efectoLuzSeleccion != null)
-        {
-            efectoLuzSeleccion.SetActive(true);
-        }
-    }
-
-    public void DesactivarEfectoLuz()
-    {
-        if (efectoLuzSeleccion != null)
-        {
-            efectoLuzSeleccion.SetActive(false);
-        }
-    }
-
-    /// <summary>
-    /// Restablece el color al estado base del material (gris original).
-    /// Al borrar el bloque de propiedades (null), el MeshRenderer vuelve automáticamente
-    /// al color del material guardado en su memoria original.
-    /// </summary>
-    public void RestablecerColorOriginal()
-    {
-        if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer != null)
-        {
-            meshRenderer.SetPropertyBlock(null);
-        }
-        // Nota: La luz de selección ahora se apaga independientemente mediante DesactivarEfectoLuz()
+        quadRenderer.SetPropertyBlock(propBlock);
     }
 
     public Vector3 ObtenerCentro()
     {
         return transform.position;
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        // Esto cambia el color del SUELO BASE (no el Quad) en el Editor cuando modificas el bitmask
+        MeshRenderer rendererBase = GetComponent<MeshRenderer>();
+        if (rendererBase != null)
+        {
+            MaterialPropertyBlock prop = new MaterialPropertyBlock();
+            rendererBase.GetPropertyBlock(prop);
+
+            Color colorBitmask = Color.white; // 0 Muros (Libre)
+
+            if ((valorBitmask & 16) != 0) // Es una Puerta (+16)
+            {
+                colorBitmask = new Color(0.6f, 0.3f, 0.1f); // Marrón
+            }
+            else
+            {
+                int numParedes = 0;
+                if ((valorBitmask & 1) != 0) numParedes++; // Norte
+                if ((valorBitmask & 2) != 0) numParedes++; // Este
+                if ((valorBitmask & 4) != 0) numParedes++; // Sur
+                if ((valorBitmask & 8) != 0) numParedes++; // Oeste
+
+                switch (numParedes)
+                {
+                    case 0: colorBitmask = Color.white; break;
+                    case 1: colorBitmask = Color.cyan; break;       // 1 Muro
+                    case 2: colorBitmask = new Color(1f, 0.5f, 0f); break; // Naranja (Pasillos/Esquinas)
+                    case 3: colorBitmask = Color.red; break;        // Callejón sin salida
+                    case 4: colorBitmask = Color.black; break;      // Encerrado total (15)
+                }
+            }
+
+            prop.SetColor("_Color", colorBitmask);
+            prop.SetColor("_BaseColor", colorBitmask);
+            rendererBase.SetPropertyBlock(prop);
+        }
+    }
+#endif
 }

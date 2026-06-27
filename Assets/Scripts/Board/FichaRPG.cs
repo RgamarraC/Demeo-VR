@@ -3,14 +3,15 @@ using UnityEngine;
 public class FichaRPG : MonoBehaviour
 {
     [Header("Posicionamiento y Memoria")]
-    [SerializeField] private CasillaComponent casillaActual;
-    [SerializeField] private CasillaComponent casillaAnterior;
+    public CasillaComponent casillaActual;
     [SerializeField] private CasillaComponent casillaPrevisualizada;
 
     [Header("Interacción y Física VR")]
     [SerializeField] private bool estaSiendoSostenida;
     [SerializeField] private LayerMask capaTablero;
-    [SerializeField] private Color colorPrevisualizacion = Color.green;
+    
+    [Header("Pruebas Locales")]
+    [SerializeField] private bool ignorarValidacionMultijugador = false;
     
     [Header("Restricciones")]
     public int rangoMovimiento = 3;
@@ -32,8 +33,8 @@ public class FichaRPG : MonoBehaviour
     {
         if (estaSiendoSostenida)
         {
-            // Lanza el Raycast hacia abajo buscando casillas del tablero
-            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 10f, capaTablero))
+            // Lanza el Raycast hacia abajo buscando casillas del tablero (con distancia infinita)
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, Mathf.Infinity, capaTablero))
             {
                 CasillaComponent casillaDetectada = hit.collider.GetComponent<CasillaComponent>();
 
@@ -43,22 +44,22 @@ public class FichaRPG : MonoBehaviour
                     permitida = gridManager.EsCasillaValida(casillaDetectada);
                 }
 
-                if (casillaDetectada != null && permitida)
+                if (casillaDetectada != null && permitida && (!casillaDetectada.estaOcupada || casillaDetectada == casillaActual))
                 {
                     if (casillaPrevisualizada != null && casillaPrevisualizada != casillaDetectada)
                     {
-                        casillaPrevisualizada.CambiarColor(gridManager.ColorRangoIluminado);
+                        casillaPrevisualizada.SetearEstadoVisual("EnRango");
                     }
 
                     casillaPrevisualizada = casillaDetectada;
-                    casillaPrevisualizada.CambiarColor(colorPrevisualizacion);
+                    casillaPrevisualizada.SetearEstadoVisual("Hover");
                 }
                 else
                 {
                     // Si salimos de la zona de casillas, el raycast no golpea nada, o la casilla ESTÁ OCUPADA
                     if (casillaPrevisualizada != null)
                     {
-                        casillaPrevisualizada.CambiarColor(gridManager.ColorRangoIluminado);
+                        casillaPrevisualizada.SetearEstadoVisual("EnRango");
                         casillaPrevisualizada = null;
                     }
                 }
@@ -68,7 +69,7 @@ public class FichaRPG : MonoBehaviour
                 // Si el raycast no golpea absolutamente nada
                 if (casillaPrevisualizada != null)
                 {
-                    casillaPrevisualizada.CambiarColor(gridManager.ColorRangoIluminado);
+                    casillaPrevisualizada.SetearEstadoVisual("EnRango");
                     casillaPrevisualizada = null;
                 }
             }
@@ -80,7 +81,7 @@ public class FichaRPG : MonoBehaviour
     {
         // === VALIDACIÓN MULTIJUGADOR ===
         // Bypass para Test Local: Si existe GameplayManager y TurnManager, verificamos las reglas de red
-        if (GameplayManager.Instance != null && TurnManager.Instance != null)
+        if (!ignorarValidacionMultijugador && GameplayManager.Instance != null && TurnManager.Instance != null)
         {
             // 1. ¿Es mi turno?
             if (!TurnManager.Instance.IsMyTurn())
@@ -101,17 +102,14 @@ public class FichaRPG : MonoBehaviour
         if (rb != null) rb.isKinematic = false;
 
         estaSiendoSostenida = true;
-        casillaAnterior = casillaActual;
+        // Ocupación Atómica: NO alteramos casillaActual.estaOcupada, sigue siendo de nuestra propiedad.
 
-        if (casillaActual != null)
-        {
-            casillaActual.EstaOcupada = false;
-            casillaActual = null;
-        }
+        Debug.Log($"[FichaRPG] Ficha levantada. GridManager: {(GridManager.Instance != null ? "OK" : "NULL")}, casillaActual: {(casillaActual != null ? casillaActual.name : "NULL")}");
 
-        if (GridManager.Instance != null && casillaAnterior != null)
+        if (GridManager.Instance != null && casillaActual != null)
         {
-            GridManager.Instance.MostrarRangoMovimiento(casillaAnterior, rangoMovimiento);
+            // Calculamos el rango partiendo desde nuestra propia casillaActual
+            GridManager.Instance.MostrarRangoMovimiento(casillaActual, rangoMovimiento);
         }
     }
 
@@ -120,38 +118,36 @@ public class FichaRPG : MonoBehaviour
     {
         estaSiendoSostenida = false;
 
-        // CANDADO DE SEGURIDAD: Guardar la validación ANTES de ocultar el rango (porque Ocultar limpia la lista)
-        bool casillaInvalida = true;
+        bool casillaEnRango = false;
         if (gridManager != null && casillaPrevisualizada != null)
         {
-            casillaInvalida = !gridManager.EsCasillaValida(casillaPrevisualizada);
+            casillaEnRango = gridManager.EsCasillaValida(casillaPrevisualizada);
         }
 
-        // Apagamos el tablero visualmente
+        // Apagamos el tablero visualmente DESPUÉS de validar, porque OcultarRango limpia la lista de casillas válidas
         if (GridManager.Instance != null)
         {
             GridManager.Instance.OcultarRangoMovimiento();
         }
 
-        // Si es inválida, ocupada, soltada en el aire o en su propio sitio, vuelve al origen
-        if (casillaPrevisualizada == casillaAnterior || casillaPrevisualizada == null || casillaPrevisualizada.EstaOcupada || casillaInvalida)
+        // Caso Éxito (Nueva Casilla Válida): En rango, libre y distinta a la actual
+        if (casillaPrevisualizada != null && casillaEnRango && !casillaPrevisualizada.estaOcupada && casillaPrevisualizada != casillaActual)
         {
-            if (casillaAnterior != null)
-            {
-                transform.position = casillaAnterior.ObtenerCentro();
-                transform.rotation = Quaternion.identity; // Enderezar ficha al volver
-                if (rb != null) rb.isKinematic = true;    // Anular fuerzas físicas residuales
-                
-                casillaActual = casillaAnterior;
-                casillaActual.EstaOcupada = true;
-            }
-            
-            casillaPrevisualizada = null;
-            return;
+            // ColocarEnCasilla se encarga de liberar la actual, ocupar la nueva, y magnetizar.
+            ColocarEnCasilla(casillaPrevisualizada);
         }
-
-        // Si es una casilla válida, aplicamos el movimiento final
-        ColocarEnCasilla(casillaPrevisualizada);
+        // Caso Fallido / Cancelado (Fuera del tablero, obstáculo o soltada sobre sí misma)
+        else
+        {
+            // Mantiene casillaActual.estaOcupada = true y regresa al origen sin penalización
+            if (casillaActual != null)
+            {
+                transform.position = casillaActual.ObtenerCentro();
+                transform.rotation = Quaternion.identity;
+                if (rb != null) rb.isKinematic = true;
+            }
+        }
+        
         casillaPrevisualizada = null;
     }
 
@@ -161,15 +157,20 @@ public class FichaRPG : MonoBehaviour
 
         if (casillaActual != null)
         {
-            casillaActual.EstaOcupada = false;
+            casillaActual.estaOcupada = false;
         }
 
         casillaActual = nuevaCasilla;
-        casillaActual.EstaOcupada = true;
+        casillaActual.estaOcupada = true;
         
         transform.position = casillaActual.ObtenerCentro();
         transform.rotation = Quaternion.identity; // Restablecer rotación para que quede perfectamente derecha
 
         if (rb != null) rb.isKinematic = true;
+    }
+
+    public void ColocarEnCasillaInicial(CasillaComponent nuevaCasilla)
+    {
+        ColocarEnCasilla(nuevaCasilla);
     }
 }

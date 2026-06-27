@@ -15,16 +15,9 @@ public class GridManager : MonoBehaviour
     [SerializeField] private Color colorSpawn = Color.green;
     [SerializeField] private Color colorRangoIluminado = Color.yellow; // Rango Válido
     
-    [Header("Detección de Paredes (Bake Geométrico)")]
-    [SerializeField] private float tamañoCasilla = 2f;
-    [SerializeField] private float alturaRayoDeteccion = 0.5f;
-    [SerializeField] private Vector3 tamañoSensorBorde = new Vector3(0.8f, 1f, 0.1f);
-
-    public Color ColorRangoIluminado => colorRangoIluminado;
-
     // Estructura de datos indexada (Diccionario) para acceder rápidamente por coordenadas
-    private Dictionary<Vector2Int, CasillaComponent> diccionarioCasillas = new Dictionary<Vector2Int, CasillaComponent>();
-    public Dictionary<Vector2Int, CasillaComponent> DiccionarioCasillas => diccionarioCasillas;
+    private Dictionary<Vector2Int, CasillaComponent> diccionarioTablero = new Dictionary<Vector2Int, CasillaComponent>();
+    public Dictionary<Vector2Int, CasillaComponent> DiccionarioTablero => diccionarioTablero;
 
     private List<CasillaComponent> casillasIluminadas = new List<CasillaComponent>();
 
@@ -35,8 +28,30 @@ public class GridManager : MonoBehaviour
 
     private void Start()
     {
-        EscanearTablero();
+        InicializarTableroManual();
         DesplegarHeroesEnSpawns();
+    }
+
+    public void InicializarTableroManual()
+    {
+        diccionarioTablero.Clear();
+        CasillaComponent[] todasLasCasillas = Object.FindObjectsByType<CasillaComponent>(FindObjectsSortMode.None);
+
+        foreach (var c in todasLasCasillas)
+        {
+            Vector2Int coord = new Vector2Int(c.coordenadaX, c.coordenadaZ);
+            if (!diccionarioTablero.ContainsKey(coord))
+            {
+                diccionarioTablero[coord] = c;
+            }
+            else
+            {
+                Debug.LogWarning($"[GridManager] Coordenada duplicada detectada: {coord}. Casilla {c.name} ignorada.");
+            }
+        }
+        
+        Debug.Log($"[GridManager] Tablero inicializado manualmente con {diccionarioTablero.Count} casillas.");
+        ActualizarColoresDebug();
     }
 
     /// <summary>
@@ -61,13 +76,17 @@ public class GridManager : MonoBehaviour
 
         cola.Enqueue(origen);
         visitadas.Add(origen);
+        
+        // Incluir el origen como válido siempre (permite cancelar el movimiento cayendo en el mismo lugar)
+        casillasIluminadas.Add(origen);
+        origen.SetearEstadoVisual("EnRango");
 
         Vector2Int[] direcciones = new Vector2Int[]
         {
-            new Vector2Int(0, 1),   // Arriba
-            new Vector2Int(0, -1),  // Abajo
-            new Vector2Int(1, 0),   // Derecha
-            new Vector2Int(-1, 0),  // Izquierda
+            new Vector2Int(0, 1),   // Arriba (Norte)
+            new Vector2Int(0, -1),  // Abajo (Sur)
+            new Vector2Int(1, 0),   // Derecha (Este)
+            new Vector2Int(-1, 0),  // Izquierda (Oeste)
             new Vector2Int(1, 1),   // Diagonal Arriba-Derecha
             new Vector2Int(1, -1),  // Diagonal Abajo-Derecha
             new Vector2Int(-1, 1),  // Diagonal Arriba-Izquierda
@@ -80,55 +99,80 @@ public class GridManager : MonoBehaviour
 
             foreach (var dir in direcciones)
             {
+                // Extraer transitabilidad: el camino está LIBRE si el bit correspondiente es 0 (o si es puerta=16)
+                bool puedeNorte = ((actual.valorBitmask & 1) == 0) || ((actual.valorBitmask & 16) != 0);
+                bool puedeEste = ((actual.valorBitmask & 2) == 0) || ((actual.valorBitmask & 16) != 0);
+                bool puedeSur = ((actual.valorBitmask & 4) == 0) || ((actual.valorBitmask & 16) != 0);
+                bool puedeOeste = ((actual.valorBitmask & 8) == 0) || ((actual.valorBitmask & 16) != 0);
+
                 // Validación Estricta de Muros (Evitar traspasar paredes)
-                if (dir == new Vector2Int(0, 1) && actual.muroAlNorte) continue;
-                if (dir == new Vector2Int(0, -1) && actual.muroAlSur) continue;
-                if (dir == new Vector2Int(1, 0) && actual.muroAlEste) continue;
-                if (dir == new Vector2Int(-1, 0) && actual.muroAlOeste) continue;
+                if (dir == new Vector2Int(0, 1) && !puedeNorte) continue;
+                if (dir == new Vector2Int(0, -1) && !puedeSur) continue;
+                if (dir == new Vector2Int(1, 0) && !puedeEste) continue;
+                if (dir == new Vector2Int(-1, 0) && !puedeOeste) continue;
 
                 // Validación de Muros en Diagonales (No permite cortar esquinas a través de un muro)
-                if (dir == new Vector2Int(1, 1) && (actual.muroAlNorte || actual.muroAlEste)) continue;
-                if (dir == new Vector2Int(1, -1) && (actual.muroAlSur || actual.muroAlEste)) continue;
-                if (dir == new Vector2Int(-1, 1) && (actual.muroAlNorte || actual.muroAlOeste)) continue;
-                if (dir == new Vector2Int(-1, -1) && (actual.muroAlSur || actual.muroAlOeste)) continue;
+                if (dir == new Vector2Int(1, 1) && (!puedeNorte || !puedeEste)) continue;
+                if (dir == new Vector2Int(1, -1) && (!puedeSur || !puedeEste)) continue;
+                if (dir == new Vector2Int(-1, 1) && (!puedeNorte || !puedeOeste)) continue;
+                if (dir == new Vector2Int(-1, -1) && (!puedeSur || !puedeOeste)) continue;
 
-                Vector2Int coordVecina = actual.CoordenadaGrid + dir;
+                Vector2Int coordVecina = new Vector2Int(actual.coordenadaX + dir.x, actual.coordenadaZ + dir.y);
 
-                if (diccionarioCasillas.TryGetValue(coordVecina, out CasillaComponent vecino))
+                if (diccionarioTablero.TryGetValue(coordVecina, out CasillaComponent vecino))
                 {
+                    // Saltar si es un obstáculo explícito
+                    if (vecino.esObstaculo) continue;
+
+                    bool vecinoPuedeNorte = ((vecino.valorBitmask & 1) == 0) || ((vecino.valorBitmask & 16) != 0);
+                    bool vecinoPuedeEste = ((vecino.valorBitmask & 2) == 0) || ((vecino.valorBitmask & 16) != 0);
+                    bool vecinoPuedeSur = ((vecino.valorBitmask & 4) == 0) || ((vecino.valorBitmask & 16) != 0);
+                    bool vecinoPuedeOeste = ((vecino.valorBitmask & 8) == 0) || ((vecino.valorBitmask & 16) != 0);
+
                     // Validación bidireccional preventiva (el vecino tampoco debe tener un muro hacia nosotros)
-                    if (dir == new Vector2Int(0, 1) && vecino.muroAlSur) continue;
-                    if (dir == new Vector2Int(0, -1) && vecino.muroAlNorte) continue;
-                    if (dir == new Vector2Int(1, 0) && vecino.muroAlOeste) continue;
-                    if (dir == new Vector2Int(-1, 0) && vecino.muroAlEste) continue;
+                    if (dir == new Vector2Int(0, 1) && !vecinoPuedeSur) continue;
+                    if (dir == new Vector2Int(0, -1) && !vecinoPuedeNorte) continue;
+                    if (dir == new Vector2Int(1, 0) && !vecinoPuedeOeste) continue;
+                    if (dir == new Vector2Int(-1, 0) && !vecinoPuedeEste) continue;
+
+                    // Validación bidireccional en diagonales
+                    if (dir == new Vector2Int(1, 1) && (!vecinoPuedeSur || !vecinoPuedeOeste)) continue;
+                    if (dir == new Vector2Int(1, -1) && (!vecinoPuedeNorte || !vecinoPuedeOeste)) continue;
+                    if (dir == new Vector2Int(-1, 1) && (!vecinoPuedeSur || !vecinoPuedeEste)) continue;
+                    if (dir == new Vector2Int(-1, -1) && (!vecinoPuedeNorte || !vecinoPuedeEste)) continue;
 
                     if (!visitadas.Contains(vecino))
                     {
                         // 1. Verificar si está dentro del rango circular
-                        if (EsCasillaEnRangoCircularGrid(origen.CoordenadaGrid, coordVecina, rango))
+                        Vector2Int origenCoord = new Vector2Int(origen.coordenadaX, origen.coordenadaZ);
+                        if (EsCasillaEnRangoCircularGrid(origenCoord, coordVecina, rango))
                         {
                             visitadas.Add(vecino);
                             cola.Enqueue(vecino);
 
-                            // Si está libre de personajes, la agregamos como válida e iluminamos
-                            if (!vecino.EstaOcupada && !casillasIluminadas.Contains(vecino))
+                            // Filtro de Destino: iluminar solo si no está ocupada (a menos que sea el propio origen)
+                            if (!vecino.estaOcupada || vecino == origen)
                             {
-                                vecino.CambiarColor(colorRangoIluminado);
-                                casillasIluminadas.Add(vecino);
+                                if (!casillasIluminadas.Contains(vecino))
+                                {
+                                    vecino.SetearEstadoVisual("EnRango");
+                                    casillasIluminadas.Add(vecino);
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
+        Debug.Log($"BFS ejecutado. Casillas válidas encontradas: {casillasIluminadas.Count}");
     }
 
     public void OcultarRangoMovimiento()
     {
         foreach (var casilla in casillasIluminadas)
         {
-            casilla.DesactivarEfectoLuz();
-            casilla.RestablecerColorOriginal();
+            casilla.SetearEstadoVisual("Apagado");
         }
         casillasIluminadas.Clear();
     }
@@ -140,122 +184,37 @@ public class GridManager : MonoBehaviour
 
     private void DesplegarHeroesEnSpawns()
     {
-        // En Unity 2023+, FindObjectsByType es la forma optimizada
-        FichaRPG[] heroes = Object.FindObjectsByType<FichaRPG>(FindObjectsSortMode.None);
+        // Usa FichaRPG[] todasLasFichas = FindObjectsByType<FichaRPG>(FindObjectsSortMode.None); para encontrar todas las piezas que estén en la escena
+        FichaRPG[] todasLasFichas = Object.FindObjectsByType<FichaRPG>(FindObjectsSortMode.None);
         
-        // Obtenemos solo las casillas marcadas como spawn de héroes
-        var casillasSpawn = diccionarioCasillas.Values.Where(c => c.EsSpawnHeroe).ToList();
+        // Recorre tus casillas indexadas y busca cuáles tienen el booleano esSpawnHeroe == true
+        var casillasSpawn = diccionarioTablero.Values.Where(c => c.esSpawnHeroe).ToList();
 
-        for (int i = 0; i < heroes.Length; i++)
+        for (int i = 0; i < todasLasFichas.Length; i++)
         {
             if (i < casillasSpawn.Count)
             {
-                heroes[i].ColocarEnCasilla(casillasSpawn[i]);
+                FichaRPG ficha = todasLasFichas[i];
+                CasillaComponent casillaSpawn = casillasSpawn[i];
+
+                // Teletransporta físicamente cada ficha al centro de su respectiva casilla de spawn
+                ficha.transform.position = casillaSpawn.ObtenerCentro();
+                ficha.transform.rotation = Quaternion.identity;
+                
+                if (ficha.GetComponent<Rigidbody>() != null)
+                {
+                    ficha.GetComponent<Rigidbody>().isKinematic = true;
+                }
+
+                // Configura las variables de estado de inmediato en ese mismo instante
+                casillaSpawn.estaOcupada = true;
+                ficha.casillaActual = casillaSpawn;
             }
             else
             {
-                Debug.LogWarning($"[GridManager] No hay suficientes casillas de spawn para el héroe {heroes[i].gameObject.name}.");
+                Debug.LogWarning($"[GridManager] No hay suficientes casillas de spawn para el héroe {todasLasFichas[i].gameObject.name}.");
             }
         }
-    }
-
-    [ContextMenu("Escanear Tablero")]
-    public void EscanearTablero()
-    {
-        if (padreTablero == null)
-        {
-            Debug.LogWarning("[GridManager] No se ha asignado el Transform 'padreTablero'.");
-            return;
-        }
-
-        CasillaComponent[] casillas = padreTablero.GetComponentsInChildren<CasillaComponent>();
-
-        if (casillas.Length == 0) return;
-
-        diccionarioCasillas.Clear();
-
-        var posicionesX = casillas
-            .Select(c => Mathf.RoundToInt(padreTablero.InverseTransformPoint(c.transform.position).x * 10f))
-            .Distinct()
-            .OrderBy(x => x)
-            .ToList();
-
-        var posicionesZ = casillas
-            .Select(c => Mathf.RoundToInt(padreTablero.InverseTransformPoint(c.transform.position).z * 10f))
-            .Distinct()
-            .OrderBy(z => z)
-            .ToList();
-
-        foreach (var casilla in casillas)
-        {
-            Vector3 posRelativa = padreTablero.InverseTransformPoint(casilla.transform.position);
-            
-            int gridX = posicionesX.IndexOf(Mathf.RoundToInt(posRelativa.x * 10f));
-            int gridY = posicionesZ.IndexOf(Mathf.RoundToInt(posRelativa.z * 10f));
-            
-            casilla.CoordenadaGrid = new Vector2Int(gridX, gridY);
-
-            // Guardamos la casilla en el diccionario
-            if (!diccionarioCasillas.ContainsKey(casilla.CoordenadaGrid))
-            {
-                diccionarioCasillas.Add(casilla.CoordenadaGrid, casilla);
-            }
-        }
-
-        Debug.Log($"[GridManager] Tablero escaneado exitosamente. Se indexaron {diccionarioCasillas.Count} casillas.");
-        
-        BakarParedesDelTablero(); // Llamada al nuevo sistema geométrico de bordes
-        
-        ActualizarColoresDebug();
-    }
-
-    private void BakarParedesDelTablero()
-    {
-        foreach (var kvp in diccionarioCasillas)
-        {
-            CasillaComponent casilla = kvp.Value;
-            Vector3 centro = casilla.ObtenerCentro();
-
-            // Norte (+Z)
-            Vector3 posNorte = centro + new Vector3(0, alturaRayoDeteccion, tamañoCasilla / 2f);
-            casilla.muroAlNorte = DetectarMuroEnFrontera(posNorte, Quaternion.identity);
-
-            // Sur (-Z)
-            Vector3 posSur = centro + new Vector3(0, alturaRayoDeteccion, -tamañoCasilla / 2f);
-            casilla.muroAlSur = DetectarMuroEnFrontera(posSur, Quaternion.identity);
-
-            // Este (+X)
-            Vector3 posEste = centro + new Vector3(tamañoCasilla / 2f, alturaRayoDeteccion, 0);
-            casilla.muroAlEste = DetectarMuroEnFrontera(posEste, Quaternion.Euler(0, 90, 0));
-
-            // Oeste (-X)
-            Vector3 posOeste = centro + new Vector3(-tamañoCasilla / 2f, alturaRayoDeteccion, 0);
-            casilla.muroAlOeste = DetectarMuroEnFrontera(posOeste, Quaternion.Euler(0, 90, 0));
-        }
-
-        Debug.Log($"[GridManager] Bordes de casillas (Muros) calculados geométricamente con éxito.");
-    }
-
-    private bool DetectarMuroEnFrontera(Vector3 posicion, Quaternion rotacion)
-    {
-        Collider[] choques = Physics.OverlapBox(posicion, tamañoSensorBorde / 2f, rotacion, capaParedes);
-        
-        foreach (Collider hit in choques)
-        {
-            // Filtro de Puertas: Si es una puerta, no se considera muro bloqueante
-            if (hit.CompareTag("Door"))
-            {
-                continue; 
-            }
-            
-            // Filtro adicional de seguridad para evitar detectar suelo o fichas
-            if (hit.GetComponentInParent<CasillaComponent>() == null && hit.GetComponentInParent<FichaRPG>() == null)
-            {
-                return true; // Es un muro real bloqueante
-            }
-        }
-        
-        return false;
     }
 
     private void OnValidate()
@@ -265,19 +224,17 @@ public class GridManager : MonoBehaviour
 
     private void ActualizarColoresDebug()
     {
-        if (padreTablero == null) return;
+        if (padreTablero == null || diccionarioTablero == null) return;
 
-        CasillaComponent[] casillas = padreTablero.GetComponentsInChildren<CasillaComponent>();
-
-        foreach (var casilla in casillas)
+        foreach (var casilla in diccionarioTablero.Values)
         {
-            if (modoDebugSpawns && casilla.EsSpawnHeroe)
+            if (modoDebugSpawns && casilla.esSpawnHeroe)
             {
-                casilla.CambiarColor(colorSpawn);
+                casilla.SetearEstadoVisual("Hover");
             }
             else
             {
-                casilla.RestablecerColorOriginal();
+                casilla.SetearEstadoVisual("Apagado");
             }
         }
     }
