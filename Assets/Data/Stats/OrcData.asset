@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 687ca6504a617f649a8728c7a00730fb, type: 3}
-  m_Name: PaladinStats
+  m_Name: OrcData
   m_EditorClassIdentifier: Assembly-CSharp::DemeoVR.Gameplay.PieceData
-  pieceType: 0
+  pieceType: 2
   maxHealth: 100
-  physicalDamage: 15
-  magicDamage: 5
-  armor: 2
-  magicResistance: 1
+  physicalDamage: 12
+  magicDamage: 0
+  armor: 5
+  magicResistance: 2
   maxAP: 2
   hpGrowth: 20
   physicalDamageGrowth: 3
