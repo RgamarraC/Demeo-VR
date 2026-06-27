@@ -11,9 +11,14 @@ public class GridManager : MonoBehaviour
     [SerializeField] private LayerMask capaParedes;
 
     [Header("Configuración de Debug")]
+    [Tooltip("Activa este modo para ver los colores de los bitmasks en todas las casillas a la vez.")]
+    public bool modoDebugColorCasillas = false;
     [SerializeField] private bool modoDebugSpawns;
     [SerializeField] private Color colorSpawn = Color.green;
     [SerializeField] private Color colorRangoIluminado = Color.yellow; // Rango Válido
+    
+    [Header("Niebla de Guerra")]
+    public int rangoVisionHeroes = 3;
     
     // Estructura de datos indexada (Diccionario) para acceder rápidamente por coordenadas
     private Dictionary<Vector2Int, CasillaComponent> diccionarioTablero = new Dictionary<Vector2Int, CasillaComponent>();
@@ -30,6 +35,7 @@ public class GridManager : MonoBehaviour
     {
         InicializarTableroManual();
         DesplegarHeroesEnSpawns();
+        ActualizarNieblaDeGuerraGlobal();
     }
 
     public void InicializarTableroManual()
@@ -217,10 +223,25 @@ public class GridManager : MonoBehaviour
         }
     }
 
+#if UNITY_EDITOR
     private void OnValidate()
     {
         ActualizarColoresDebug();
+
+        // Cuando cambias el checkbox en el GridManager, actualizamos todos los hijos en el editor
+        CasillaComponent[] casillas = Object.FindObjectsByType<CasillaComponent>(FindObjectsSortMode.None);
+        if (casillas != null)
+        {
+            foreach (var c in casillas)
+            {
+                if (c != null)
+                {
+                    c.ActualizarColorDebug(modoDebugColorCasillas);
+                }
+            }
+        }
     }
+#endif
 
     private void ActualizarColoresDebug()
     {
@@ -232,10 +253,113 @@ public class GridManager : MonoBehaviour
             {
                 casilla.SetearEstadoVisual("Hover");
             }
+            // Eliminado el "Apagado" de aquí para que no interfiera con la Niebla
+        }
+    }
+
+    public void ActualizarNieblaDeGuerraGlobal()
+    {
+        HashSet<CasillaComponent> casillasVisiblesColectivas = new HashSet<CasillaComponent>();
+        FichaRPG[] todosLosHeroes = Object.FindObjectsByType<FichaRPG>(FindObjectsSortMode.None).Where(f => f.esHeroe).ToArray();
+
+        Vector2Int[] direcciones = new Vector2Int[]
+        {
+            new Vector2Int(0, 1),   // Norte
+            new Vector2Int(0, -1),  // Sur
+            new Vector2Int(1, 0),   // Este
+            new Vector2Int(-1, 0),  // Oeste
+            new Vector2Int(1, 1),   // Diagonal Arriba-Derecha
+            new Vector2Int(1, -1),  // Diagonal Abajo-Derecha
+            new Vector2Int(-1, 1),  // Diagonal Arriba-Izquierda
+            new Vector2Int(-1, -1)  // Diagonal Abajo-Izquierda
+        };
+
+        foreach (var heroe in todosLosHeroes)
+        {
+            if (heroe.casillaActual == null) continue;
+
+            Queue<CasillaComponent> cola = new Queue<CasillaComponent>();
+            HashSet<CasillaComponent> visitadas = new HashSet<CasillaComponent>();
+
+            cola.Enqueue(heroe.casillaActual);
+            visitadas.Add(heroe.casillaActual);
+            casillasVisiblesColectivas.Add(heroe.casillaActual);
+
+            while (cola.Count > 0)
+            {
+                CasillaComponent actual = cola.Dequeue();
+
+                foreach (var dir in direcciones)
+                {
+                    bool puedeNorte = ((actual.valorBitmask & 1) == 0) || ((actual.valorBitmask & 16) != 0);
+                    bool puedeEste = ((actual.valorBitmask & 2) == 0) || ((actual.valorBitmask & 16) != 0);
+                    bool puedeSur = ((actual.valorBitmask & 4) == 0) || ((actual.valorBitmask & 16) != 0);
+                    bool puedeOeste = ((actual.valorBitmask & 8) == 0) || ((actual.valorBitmask & 16) != 0);
+
+                    if (dir == new Vector2Int(0, 1) && !puedeNorte) continue;
+                    if (dir == new Vector2Int(0, -1) && !puedeSur) continue;
+                    if (dir == new Vector2Int(1, 0) && !puedeEste) continue;
+                    if (dir == new Vector2Int(-1, 0) && !puedeOeste) continue;
+
+                    if (dir == new Vector2Int(1, 1) && (!puedeNorte || !puedeEste)) continue;
+                    if (dir == new Vector2Int(1, -1) && (!puedeSur || !puedeEste)) continue;
+                    if (dir == new Vector2Int(-1, 1) && (!puedeNorte || !puedeOeste)) continue;
+                    if (dir == new Vector2Int(-1, -1) && (!puedeSur || !puedeOeste)) continue;
+
+                    Vector2Int coordVecina = new Vector2Int(actual.coordenadaX + dir.x, actual.coordenadaZ + dir.y);
+
+                    if (diccionarioTablero.TryGetValue(coordVecina, out CasillaComponent vecino))
+                    {
+                        bool vecinoPuedeNorte = ((vecino.valorBitmask & 1) == 0) || ((vecino.valorBitmask & 16) != 0);
+                        bool vecinoPuedeEste = ((vecino.valorBitmask & 2) == 0) || ((vecino.valorBitmask & 16) != 0);
+                        bool vecinoPuedeSur = ((vecino.valorBitmask & 4) == 0) || ((vecino.valorBitmask & 16) != 0);
+                        bool vecinoPuedeOeste = ((vecino.valorBitmask & 8) == 0) || ((vecino.valorBitmask & 16) != 0);
+
+                        if (dir == new Vector2Int(0, 1) && !vecinoPuedeSur) continue;
+                        if (dir == new Vector2Int(0, -1) && !vecinoPuedeNorte) continue;
+                        if (dir == new Vector2Int(1, 0) && !vecinoPuedeOeste) continue;
+                        if (dir == new Vector2Int(-1, 0) && !vecinoPuedeEste) continue;
+
+                        if (dir == new Vector2Int(1, 1) && (!vecinoPuedeSur || !vecinoPuedeOeste)) continue;
+                        if (dir == new Vector2Int(1, -1) && (!vecinoPuedeNorte || !vecinoPuedeOeste)) continue;
+                        if (dir == new Vector2Int(-1, 1) && (!vecinoPuedeSur || !vecinoPuedeEste)) continue;
+                        if (dir == new Vector2Int(-1, -1) && (!vecinoPuedeNorte || !vecinoPuedeEste)) continue;
+
+                        if (!visitadas.Contains(vecino))
+                        {
+                            Vector2Int origenCoord = new Vector2Int(heroe.casillaActual.coordenadaX, heroe.casillaActual.coordenadaZ);
+                            if (EsCasillaEnRangoCircularGrid(origenCoord, coordVecina, rangoVisionHeroes))
+                            {
+                                visitadas.Add(vecino);
+                                
+                                // ¡Ahora sí la podemos ver! Se añade al mapa iluminado (incluso si es un obstáculo)
+                                casillasVisiblesColectivas.Add(vecino);
+
+                                // Solo seguimos explorando a través de ella si NO es un obstáculo
+                                if (!vecino.esObstaculo)
+                                {
+                                    cola.Enqueue(vecino);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach (var casilla in diccionarioTablero.Values)
+        {
+            if (casillasVisiblesColectivas.Contains(casilla))
+            {
+                casilla.estaEnNiebla = false;
+                casilla.SetearEstadoVisual("Visible");
+            }
             else
             {
-                casilla.SetearEstadoVisual("Apagado");
+                casilla.estaEnNiebla = true;
+                casilla.SetearEstadoVisual("Niebla");
             }
         }
     }
+
 }

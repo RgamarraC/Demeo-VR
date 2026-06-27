@@ -1,7 +1,10 @@
 using UnityEngine;
+using DemeoVR.Gameplay;
 
 public class FichaRPG : MonoBehaviour
 {
+    [Header("Estadísticas (ScriptableObject)")]
+    public PieceData estadisticasBase;
     [Header("Posicionamiento y Memoria")]
     public CasillaComponent casillaActual;
     [SerializeField] private CasillaComponent casillaPrevisualizada;
@@ -17,6 +20,7 @@ public class FichaRPG : MonoBehaviour
     public int rangoMovimiento = 3;
 
     [Header("Propiedad y Turnos")]
+    public bool esHeroe;
     [Tooltip("Valores válidos: 'Heroe 1', 'Heroe 2', 'Dungeon Master'")]
     [SerializeField] private string rolPropietario;
 
@@ -149,6 +153,12 @@ public class FichaRPG : MonoBehaviour
         }
         
         casillaPrevisualizada = null;
+
+        // Actualizar la niebla de guerra global cada vez que una ficha termina su movimiento
+        if (GridManager.Instance != null)
+        {
+            GridManager.Instance.ActualizarNieblaDeGuerraGlobal();
+        }
     }
 
     public void ColocarEnCasilla(CasillaComponent nuevaCasilla)

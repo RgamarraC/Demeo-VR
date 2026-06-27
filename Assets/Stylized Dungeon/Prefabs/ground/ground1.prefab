@@ -126,11 +126,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbc0d6345094a6748bfb840498e16177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CasillaComponent
-  coordenadaGrid: {x: 0, y: 0}
+  coordenadaX: 0
+  coordenadaZ: 0
+  valorBitmask: 0
   estaOcupada: 0
+  esObstaculo: 0
   esSpawnHeroe: 0
   quadRenderer: {fileID: 393869398294330681}
-  valorBitmask: 0
 --- !u!1 &9086857928373836291
 GameObject:
   m_ObjectHideFlags: 0
