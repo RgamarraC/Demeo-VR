@@ -23,7 +23,7 @@ public class GameplayNetworkPlayerSpawner : MonoBehaviour
 
         if (runner == null)
         {
-            Debug.LogError("GAMEPLAY SPAWNER: No se encontró el NetworkRunner que viene de la lobby.");
+            Debug.Log("GAMEPLAY SPAWNER: No se encontró el NetworkRunner que viene de la lobby.");
             yield break;
         }
 

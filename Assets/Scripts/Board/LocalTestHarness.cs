@@ -21,6 +21,7 @@ namespace DemeoVR.Gameplay.Testing
         [SerializeField] private LayerMask capaTablero;
 
         private FichaRPG fichaSostenida;
+        private DadoD12 dadoSostenido;
         private float distanciaAgarre = 1.5f; // Altura a la que flota la ficha
 
         private void Start()
@@ -35,13 +36,13 @@ namespace DemeoVR.Gameplay.Testing
         {
             if (mainCamera == null || Mouse.current == null) return;
 
-            // 1. Detectar clic izquierdo para AGARRAR una ficha
+            // 1. Detectar clic izquierdo para AGARRAR
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {
                 Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-                // Disparamos un raycast general para ver a qué le dimos
                 if (Physics.Raycast(ray, out RaycastHit hit, 100f))
                 {
+                    // Verificamos si tocamos una ficha
                     FichaRPG ficha = hit.collider.GetComponentInParent<FichaRPG>();
                     if (ficha != null)
                     {
@@ -49,28 +50,74 @@ namespace DemeoVR.Gameplay.Testing
                         fichaSostenida.AlSerLevantada();
                         Debug.Log($"<color=green>[TestHarness] Levantando ficha: {fichaSostenida.name}</color>");
                     }
+                    else
+                    {
+                        // Si no tocamos una ficha, vemos si tocamos el Dado
+                        DadoD12 dado = hit.collider.GetComponentInParent<DadoD12>();
+                        if (dado != null)
+                        {
+                            dadoSostenido = dado;
+                            Rigidbody rb = dadoSostenido.GetComponent<Rigidbody>();
+                            if (rb != null) rb.isKinematic = true; // Lo congelamos en el aire
+                            dadoSostenido.enMovimiento = false;
+                            Debug.Log($"<color=green>[TestHarness] Agarrando Dado...</color>");
+                        }
+                    }
                 }
             }
 
-            // 2. Mover la ficha mientras se mantiene el clic
-            if (Mouse.current.leftButton.isPressed && fichaSostenida != null)
+            // 2. Mover el objeto sostenido mientras se mantiene el clic
+            if (Mouse.current.leftButton.isPressed)
             {
-                Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-                // Aquí solo queremos golpear el tablero para saber a dónde apuntamos
-                if (Physics.Raycast(ray, out RaycastHit hit, 100f, capaTablero))
+                if (fichaSostenida != null)
                 {
-                    // Hacer que la ficha siga el punto donde el raycast toca el tablero, pero elevada
-                    Vector3 posicionDeseada = hit.point + Vector3.up * distanciaAgarre;
-                    fichaSostenida.transform.position = Vector3.Lerp(fichaSostenida.transform.position, posicionDeseada, Time.deltaTime * 20f);
+                    Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+                    if (Physics.Raycast(ray, out RaycastHit hit, 100f, capaTablero))
+                    {
+                        Vector3 posicionDeseada = hit.point + Vector3.up * distanciaAgarre;
+                        fichaSostenida.transform.position = Vector3.Lerp(fichaSostenida.transform.position, posicionDeseada, Time.deltaTime * 20f);
+                    }
+                }
+                else if (dadoSostenido != null)
+                {
+                    Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+                    if (Physics.Raycast(ray, out RaycastHit hit, 100f, capaTablero))
+                    {
+                        // Levantamos el dado en el aire
+                        Vector3 posicionDeseada = hit.point + Vector3.up * (distanciaAgarre * 1.5f);
+                        dadoSostenido.transform.position = Vector3.Lerp(dadoSostenido.transform.position, posicionDeseada, Time.deltaTime * 20f);
+                    }
                 }
             }
 
-            // 3. Detectar soltar el clic izquierdo para SOLTAR la ficha
-            if (Mouse.current.leftButton.wasReleasedThisFrame && fichaSostenida != null)
+            // 3. Detectar soltar el clic izquierdo para SOLTAR
+            if (Mouse.current.leftButton.wasReleasedThisFrame)
             {
-                Debug.Log($"<color=orange>[TestHarness] Soltando ficha: {fichaSostenida.name}</color>");
-                fichaSostenida.AlSerSoltada();
-                fichaSostenida = null;
+                if (fichaSostenida != null)
+                {
+                    Debug.Log($"<color=orange>[TestHarness] Soltando ficha: {fichaSostenida.name}</color>");
+                    fichaSostenida.AlSerSoltada();
+                    fichaSostenida = null;
+                }
+                else if (dadoSostenido != null)
+                {
+                    Debug.Log($"<color=orange>[TestHarness] Soltando Dado...</color>");
+                    Rigidbody rb = dadoSostenido.GetComponent<Rigidbody>();
+                    
+                    if (rb != null)
+                    {
+                        rb.isKinematic = false;
+                        rb.WakeUp();
+                        
+                        // Añadimos un pequeño giro aleatorio para que ruede bien al caer de la mano
+                        Vector3 torque = new Vector3(Random.Range(-5f, 5f), Random.Range(-5f, 5f), Random.Range(-5f, 5f));
+                        rb.AddTorque(torque, ForceMode.Impulse);
+                    }
+
+                    dadoSostenido.enMovimiento = true;
+                    dadoSostenido.resultadoActual = 0;
+                    dadoSostenido = null;
+                }
             }
         }
     }
