@@ -1,10 +1,14 @@
+using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 using DemeoVR.Gameplay;
+using System.Runtime.CompilerServices;
 
 public class FichaRPG : MonoBehaviour
 {
     [Header("Estadísticas (ScriptableObject)")]
     public PieceData estadisticasBase;
+
     [Header("Posicionamiento y Memoria")]
     public CasillaComponent casillaActual;
     [SerializeField] private CasillaComponent casillaPrevisualizada;
@@ -12,43 +16,107 @@ public class FichaRPG : MonoBehaviour
     [Header("Interacción y Física VR")]
     [SerializeField] private bool estaSiendoSostenida;
     [SerializeField] private LayerMask capaTablero;
-    
+
     [Header("Pruebas Locales")]
     [SerializeField] private bool ignorarValidacionMultijugador = false;
-    
+
     [Header("Restricciones")]
     public int rangoMovimiento = 3;
 
     [Header("Propiedad y Turnos")]
     public bool esHeroe;
+
     [Tooltip("Valores válidos: 'Heroe 1', 'Heroe 2', 'Dungeon Master'")]
     [SerializeField] private string rolPropietario;
 
     private Rigidbody rb;
     private GridManager gridManager;
 
+    // Lo usamos como Behaviour para evitar problemas de namespace entre versiones de XR Interaction Toolkit
+    private Behaviour grabInteractable;
+
+    private bool permisoAgarreInicializado = false;
+    private bool ultimoPermisoAgarre = true;
+
+    [Header("Ajuste de Imán")]
+    [SerializeField] private float alturaSobreCasilla = 0.6f;
+    public string RolPropietario => rolPropietario;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         gridManager = FindFirstObjectByType<GridManager>();
+
+        grabInteractable = BuscarXRGrabInteractable();
+
+        if (grabInteractable == null)
+        {
+            Debug.LogWarning(
+                "[FichaRPG] No se encontró XRGrabInteractable en " + gameObject.name +
+                ". Si esta ficha debe agarrarse en VR, revisa que el componente esté en el mismo GameObject."
+            );
+        }
+    }
+
+    private IEnumerator Start()
+    {
+        // Esperamos un frame para que GridManager pueda inicializar spawns/casillas
+        yield return null;
+
+        if (gridManager == null)
+            gridManager = GridManager.Instance != null ? GridManager.Instance : FindFirstObjectByType<GridManager>();
+
+        // Si por alguna razón no se asignó la casilla al venir desde Lobby -> Test,
+        // intentamos detectarla debajo de la ficha.
+        if (casillaActual == null)
+        {
+            IntentarDetectarCasillaActualPorRaycast();
+        }
+
+        ActualizarPermisoDeAgarre(true);
+
+        Debug.Log(
+            "[FichaRPG] Inicializada: " + gameObject.name +
+            " | Rol propietario = " + rolPropietario +
+            " | EsHeroe = " + esHeroe +
+            " | CasillaActual = " + (casillaActual != null ? casillaActual.name : "NULL") +
+            " | LocalRole = " + ObtenerRolLocalSeguro()
+        );
     }
 
     private void Update()
     {
+        ActualizarPermisoDeAgarre(false);
+
+        // Si por algún bug la ficha quedó sostenida cuando ya no debería,
+        // la devolvemos a su casilla.
+        if (estaSiendoSostenida && !PuedeMoverEstaFicha(false))
+        {
+            Debug.LogWarning(
+                "[FichaRPG] La ficha estaba siendo sostenida sin permiso. Se cancela movimiento. Ficha = " +
+                gameObject.name
+            );
+
+            CancelarMovimientoLocal();
+            return;
+        }
+
         if (estaSiendoSostenida)
         {
-            // Lanza el Raycast hacia abajo buscando casillas del tablero (con distancia infinita)
             if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, Mathf.Infinity, capaTablero))
             {
                 CasillaComponent casillaDetectada = hit.collider.GetComponent<CasillaComponent>();
 
                 bool permitida = false;
+
                 if (gridManager != null && casillaDetectada != null)
                 {
                     permitida = gridManager.EsCasillaValida(casillaDetectada);
                 }
 
-                if (casillaDetectada != null && permitida && (!casillaDetectada.estaOcupada || casillaDetectada == casillaActual))
+                if (casillaDetectada != null &&
+                    permitida &&
+                    (!casillaDetectada.estaOcupada || casillaDetectada == casillaActual))
                 {
                     if (casillaPrevisualizada != null && casillaPrevisualizada != casillaDetectada)
                     {
@@ -60,7 +128,6 @@ public class FichaRPG : MonoBehaviour
                 }
                 else
                 {
-                    // Si salimos de la zona de casillas, el raycast no golpea nada, o la casilla ESTÁ OCUPADA
                     if (casillaPrevisualizada != null)
                     {
                         casillaPrevisualizada.SetearEstadoVisual("EnRango");
@@ -70,7 +137,6 @@ public class FichaRPG : MonoBehaviour
             }
             else
             {
-                // Si el raycast no golpea absolutamente nada
                 if (casillaPrevisualizada != null)
                 {
                     casillaPrevisualizada.SetearEstadoVisual("EnRango");
@@ -83,36 +149,51 @@ public class FichaRPG : MonoBehaviour
     [ContextMenu("Levantar Ficha (Simular)")]
     public void AlSerLevantada()
     {
-        // === VALIDACIÓN MULTIJUGADOR ===
-        // Bypass para Test Local: Si existe GameplayManager y TurnManager, verificamos las reglas de red
-        if (!ignorarValidacionMultijugador && GameplayManager.Instance != null && TurnManager.Instance != null)
+        if (!PuedeMoverEstaFicha(true))
         {
-            // 1. ¿Es mi turno?
-            if (!TurnManager.Instance.IsMyTurn())
-            {
-                Debug.LogWarning($"[FichaRPG] Movimiento cancelado. No es tu turno.");
-                return;
-            }
-
-            // 2. ¿Soy el dueño de esta ficha?
-            if (rolPropietario != GameplayManager.Instance.LocalPlayerRole)
-            {
-                Debug.LogWarning($"[FichaRPG] Agarre cancelado. Esta ficha le pertenece al rol: {rolPropietario}. Tu rol es: {GameplayManager.Instance.LocalPlayerRole}.");
-                return;
-            }
+            CancelarMovimientoLocal();
+            return;
         }
-        // ===============================
 
-        if (rb != null) rb.isKinematic = false;
+        if (casillaActual == null)
+        {
+            Debug.LogWarning(
+                "[FichaRPG] casillaActual era NULL al levantar. Intentando detectar casilla por raycast. Ficha = " +
+                gameObject.name
+            );
+
+            IntentarDetectarCasillaActualPorRaycast();
+        }
+
+        if (casillaActual == null)
+        {
+            Debug.LogError(
+                "[FichaRPG] No se puede levantar la ficha porque casillaActual sigue siendo NULL. Ficha = " +
+                gameObject.name
+            );
+
+            CancelarMovimientoLocal();
+            return;
+        }
+
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+        }
 
         estaSiendoSostenida = true;
-        // Ocupación Atómica: NO alteramos casillaActual.estaOcupada, sigue siendo de nuestra propiedad.
 
-        Debug.Log($"[FichaRPG] Ficha levantada. GridManager: {(GridManager.Instance != null ? "OK" : "NULL")}, casillaActual: {(casillaActual != null ? casillaActual.name : "NULL")}");
+        Debug.Log(
+            "[FichaRPG] Ficha levantada correctamente. " +
+            "Ficha = " + gameObject.name +
+            " | Rol propietario = " + rolPropietario +
+            " | Rol local = " + ObtenerRolLocalSeguro() +
+            " | Casilla actual = " + casillaActual.name +
+            " | Rango movimiento = " + rangoMovimiento
+        );
 
         if (GridManager.Instance != null && casillaActual != null)
         {
-            // Calculamos el rango partiendo desde nuestra propia casillaActual
             GridManager.Instance.MostrarRangoMovimiento(casillaActual, rangoMovimiento);
         }
     }
@@ -120,41 +201,60 @@ public class FichaRPG : MonoBehaviour
     [ContextMenu("Soltar Ficha (Simular)")]
     public void AlSerSoltada()
     {
+        if (!estaSiendoSostenida)
+        {
+            Debug.LogWarning(
+                "[FichaRPG] Se llamó AlSerSoltada, pero la ficha no estaba sostenida/autorizada. Ficha = " +
+                gameObject.name
+            );
+
+            CancelarMovimientoLocal();
+            return;
+        }
+
         estaSiendoSostenida = false;
 
         bool casillaEnRango = false;
+
         if (gridManager != null && casillaPrevisualizada != null)
         {
             casillaEnRango = gridManager.EsCasillaValida(casillaPrevisualizada);
         }
 
-        // Apagamos el tablero visualmente DESPUÉS de validar, porque OcultarRango limpia la lista de casillas válidas
+        if (casillaPrevisualizada != null &&
+            casillaEnRango &&
+            !casillaPrevisualizada.estaOcupada &&
+            casillaPrevisualizada != casillaActual)
+        {
+            Debug.Log(
+                "[FichaRPG] Movimiento válido. " +
+                "Ficha = " + gameObject.name +
+                " | Desde = " + casillaActual.name +
+                " | Hacia = " + casillaPrevisualizada.name
+            );
+
+            ColocarEnCasilla(casillaPrevisualizada);
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[FichaRPG] Movimiento cancelado o inválido. La ficha vuelve a su casilla. " +
+                "Ficha = " + gameObject.name +
+                " | Casilla actual = " + (casillaActual != null ? casillaActual.name : "NULL") +
+                " | Casilla preview = " + (casillaPrevisualizada != null ? casillaPrevisualizada.name : "NULL") +
+                " | En rango = " + casillaEnRango
+            );
+
+            CancelarMovimientoLocal();
+        }
+
+        casillaPrevisualizada = null;
+
         if (GridManager.Instance != null)
         {
             GridManager.Instance.OcultarRangoMovimiento();
         }
 
-        // Caso Éxito (Nueva Casilla Válida): En rango, libre y distinta a la actual
-        if (casillaPrevisualizada != null && casillaEnRango && !casillaPrevisualizada.estaOcupada && casillaPrevisualizada != casillaActual)
-        {
-            // ColocarEnCasilla se encarga de liberar la actual, ocupar la nueva, y magnetizar.
-            ColocarEnCasilla(casillaPrevisualizada);
-        }
-        // Caso Fallido / Cancelado (Fuera del tablero, obstáculo o soltada sobre sí misma)
-        else
-        {
-            // Mantiene casillaActual.estaOcupada = true y regresa al origen sin penalización
-            if (casillaActual != null)
-            {
-                transform.position = casillaActual.ObtenerCentro();
-                transform.rotation = Quaternion.identity;
-                if (rb != null) rb.isKinematic = true;
-            }
-        }
-        
-        casillaPrevisualizada = null;
-
-        // Actualizar la niebla de guerra global cada vez que una ficha termina su movimiento
         if (GridManager.Instance != null)
         {
             GridManager.Instance.ActualizarNieblaDeGuerraGlobal();
@@ -163,7 +263,11 @@ public class FichaRPG : MonoBehaviour
 
     public void ColocarEnCasilla(CasillaComponent nuevaCasilla)
     {
-        if (nuevaCasilla == null) return;
+        if (nuevaCasilla == null)
+        {
+            Debug.LogWarning("[FichaRPG] ColocarEnCasilla recibió una casilla NULL.");
+            return;
+        }
 
         if (casillaActual != null)
         {
@@ -172,15 +276,256 @@ public class FichaRPG : MonoBehaviour
 
         casillaActual = nuevaCasilla;
         casillaActual.estaOcupada = true;
-        
-        transform.position = casillaActual.ObtenerCentro();
-        transform.rotation = Quaternion.identity; // Restablecer rotación para que quede perfectamente derecha
 
-        if (rb != null) rb.isKinematic = true;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        _ = FadeposAsync(nuevaCasilla);
+
+        Debug.Log(
+            "[FichaRPG] Ficha colocada en casilla. " +
+            "Ficha = " + gameObject.name +
+            " | Casilla = " + casillaActual.name +
+            " | X = " + casillaActual.coordenadaX +
+            " | Z = " + casillaActual.coordenadaZ
+        );
+    }
+    private async Task FadeposAsync(CasillaComponent nuevaCasilla)
+    {
+        Vector3 posicionFinal = casillaActual.ObtenerCentro();
+        posicionFinal.y = alturaSobreCasilla;
+
+        await Task.Delay(200);
+
+        transform.rotation = Quaternion.identity;
+        transform.position = posicionFinal;
     }
 
     public void ColocarEnCasillaInicial(CasillaComponent nuevaCasilla)
     {
         ColocarEnCasilla(nuevaCasilla);
+    }
+
+    private bool PuedeMoverEstaFicha(bool mostrarLogs)
+    {
+        if (ignorarValidacionMultijugador)
+        {
+            if (mostrarLogs)
+            {
+                Debug.LogWarning(
+                    "[FichaRPG] Validación multijugador ignorada para pruebas locales. Ficha = " +
+                    gameObject.name
+                );
+            }
+
+            return true;
+        }
+
+        // Si estamos probando la escena Test directamente sin venir de lobby,
+        // permitimos mover para que las pruebas locales sigan funcionando.
+        if (GameplayManager.Instance == null && TurnManager.Instance == null)
+        {
+            if (mostrarLogs)
+            {
+                Debug.Log(
+                    "[FichaRPG] Modo prueba local detectado. No hay GameplayManager ni TurnManager. Ficha = " +
+                    gameObject.name
+                );
+            }
+
+            return true;
+        }
+
+        if (GameplayManager.Instance == null)
+        {
+            if (mostrarLogs)
+                Debug.LogWarning("[FichaRPG] No existe GameplayManager. Ficha = " + gameObject.name);
+
+            return false;
+        }
+
+        if (TurnManager.Instance == null)
+        {
+            if (mostrarLogs)
+                Debug.LogWarning("[FichaRPG] No existe TurnManager. Ficha = " + gameObject.name);
+
+            return false;
+        }
+
+        string rolLocal = GameplayManager.Instance.LocalPlayerRole;
+
+        if (string.IsNullOrEmpty(rolLocal) || rolLocal == "Sin rol")
+        {
+            if (mostrarLogs)
+            {
+                Debug.LogWarning(
+                    "[FichaRPG] El rol local aún no está listo. " +
+                    "Ficha = " + gameObject.name +
+                    " | Rol local = " + rolLocal
+                );
+            }
+
+            return false;
+        }
+
+        if (!TurnManager.Instance.IsMyTurn())
+        {
+            if (mostrarLogs)
+            {
+                Debug.LogWarning(
+                    "[FichaRPG] Movimiento cancelado. No es tu turno. " +
+                    "Ficha = " + gameObject.name +
+                    " | Rol local = " + rolLocal +
+                    " | Rol propietario = " + rolPropietario
+                );
+            }
+
+            return false;
+        }
+
+        if (rolPropietario != rolLocal)
+        {
+            if (mostrarLogs)
+            {
+                Debug.LogWarning(
+                    "[FichaRPG] Agarre cancelado. Esta ficha no te pertenece. " +
+                    "Ficha = " + gameObject.name +
+                    " | Rol propietario = " + rolPropietario +
+                    " | Tu rol = " + rolLocal
+                );
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void ActualizarPermisoDeAgarre(bool forzarLog)
+    {
+        if (grabInteractable == null)
+            return;
+
+        bool permisoActual = PuedeMoverEstaFicha(false);
+
+        if (!permisoAgarreInicializado || permisoActual != ultimoPermisoAgarre || forzarLog)
+        {
+            grabInteractable.enabled = permisoActual;
+
+            Debug.Log(
+                "[FichaRPG] Permiso de agarre actualizado. " +
+                "Ficha = " + gameObject.name +
+                " | Puede agarrar = " + permisoActual +
+                " | Rol propietario = " + rolPropietario +
+                " | Rol local = " + ObtenerRolLocalSeguro() +
+                " | Es mi turno = " + ObtenerTurnoLocalSeguro()
+            );
+
+            ultimoPermisoAgarre = permisoActual;
+            permisoAgarreInicializado = true;
+        }
+    }
+
+    private void CancelarMovimientoLocal()
+    {
+        estaSiendoSostenida = false;
+        casillaPrevisualizada = null;
+
+        if (GridManager.Instance != null)
+        {
+            GridManager.Instance.OcultarRangoMovimiento();
+        }
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        if (casillaActual != null)
+        {
+            transform.position = casillaActual.ObtenerCentro();
+            transform.rotation = Quaternion.identity;
+            casillaActual.estaOcupada = true;
+        }
+    }
+
+    private bool IntentarDetectarCasillaActualPorRaycast()
+    {
+        Vector3 origenRaycast = transform.position + Vector3.up * 1.5f;
+
+        if (Physics.Raycast(origenRaycast, Vector3.down, out RaycastHit hit, 5f, capaTablero))
+        {
+            CasillaComponent casillaDetectada = hit.collider.GetComponentInParent<CasillaComponent>();
+
+            if (casillaDetectada != null)
+            {
+                casillaActual = casillaDetectada;
+                casillaActual.estaOcupada = true;
+
+                transform.position = casillaActual.ObtenerCentro();
+                transform.rotation = Quaternion.identity;
+
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.isKinematic = true;
+                }
+
+                Debug.Log(
+                    "[FichaRPG] Casilla actual detectada por raycast. " +
+                    "Ficha = " + gameObject.name +
+                    " | Casilla = " + casillaActual.name
+                );
+
+                return true;
+            }
+        }
+
+        Debug.LogWarning(
+            "[FichaRPG] No se pudo detectar casillaActual por raycast. " +
+            "Ficha = " + gameObject.name +
+            " | Revisa capaTablero y colliders de las casillas."
+        );
+
+        return false;
+    }
+
+    private Behaviour BuscarXRGrabInteractable()
+    {
+        MonoBehaviour[] componentes = GetComponents<MonoBehaviour>();
+
+        foreach (MonoBehaviour componente in componentes)
+        {
+            if (componente == null)
+                continue;
+
+            if (componente.GetType().Name == "XRGrabInteractable")
+                return componente;
+        }
+
+        return null;
+    }
+
+    private string ObtenerRolLocalSeguro()
+    {
+        if (GameplayManager.Instance == null)
+            return "Sin GameplayManager";
+
+        return GameplayManager.Instance.LocalPlayerRole;
+    }
+
+    private string ObtenerTurnoLocalSeguro()
+    {
+        if (TurnManager.Instance == null)
+            return "Sin TurnManager";
+
+        return TurnManager.Instance.IsMyTurn().ToString();
     }
 }

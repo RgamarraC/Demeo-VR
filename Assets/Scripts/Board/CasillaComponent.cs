@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 public class CasillaComponent : MonoBehaviour
 {
@@ -85,7 +86,7 @@ public class CasillaComponent : MonoBehaviour
     }
 
     public Vector3 ObtenerCentro()
-    {
+    {        
         return transform.position;
     }
 

@@ -1,17 +1,18 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Fusion;
 
-public class DungeonMasterController : MonoBehaviour
+public class DungeonMasterController : NetworkBehaviour
 {
     [Header("Configuración de Invocación")]
-    [Tooltip("Prefab del monstruo que el DM va a invocar en las sombras.")]
-    [SerializeField] private GameObject prefabEnemigo;
-    
+    [Tooltip("Prefab del monstruo registrado en Fusion. Debe tener NetworkObject.")]
+    [SerializeField] private NetworkPrefabRef prefabEnemigo;
+
     [Header("Configuración VR")]
-    [Tooltip("El Transform del mando de VR (derecho o izquierdo) desde donde sale el láser de apuntado.")]
+    [Tooltip("El Transform del mando de VR desde donde sale el láser de apuntado.")]
     [SerializeField] private Transform punteroVR;
 
-    [Tooltip("La acción de Input System vinculada al gatillo de tu mando para confirmar la invocación.")]
+    [Tooltip("Input Action del gatillo para confirmar la invocación.")]
     [SerializeField] private InputActionReference botonConfirmar;
 
     [Header("Estado Interno")]
@@ -19,40 +20,53 @@ public class DungeonMasterController : MonoBehaviour
 
     private CasillaComponent ultimaCasillaApuntada = null;
 
+    public override void Spawned()
+    {
+        Debug.Log(
+            "[DungeonMasterController] Spawned en red. " +
+            "StateAuthority = " + Object.HasStateAuthority +
+            " | LocalPlayer = " + Runner.LocalPlayer
+        );
+    }
+
     private void OnEnable()
     {
         if (botonConfirmar != null)
-        {
             botonConfirmar.action.Enable();
-        }
     }
 
     private void OnDisable()
     {
         if (botonConfirmar != null)
-        {
             botonConfirmar.action.Disable();
-        }
     }
 
     private void Update()
     {
-        if (!estaEnModoInvocacion) return;
-        
-        if (punteroVR == null)
+        if (!estaEnModoInvocacion)
+            return;
+
+        if (!PuedeUsarModoInvocacionLocal())
         {
-            Debug.LogWarning("[DungeonMaster] Falta asignar el Transform del punteroVR en el inspector.");
+            Debug.LogWarning("[DungeonMasterController] Modo invocación cancelado. Ya no eres DM o no es tu turno.");
+            estaEnModoInvocacion = false;
+            LimpiarCasillaAnterior();
             return;
         }
 
-        // Lanzamos raycast físicamente desde la punta de tu mano en VR hacia donde estás apuntando
+        if (punteroVR == null)
+        {
+            Debug.LogWarning("[DungeonMasterController] Falta asignar punteroVR en el Inspector.");
+            return;
+        }
+
         Ray ray = new Ray(punteroVR.position, punteroVR.forward);
-        
+
         if (Physics.Raycast(ray, out RaycastHit hit, 100f))
         {
-            CasillaComponent casillaDetectada = hit.collider.GetComponentInParent<CasillaComponent>();
+            CasillaComponent casillaDetectada =
+                hit.collider.GetComponentInParent<CasillaComponent>();
 
-            // Si apuntamos a una casilla distinta a la del fotograma anterior, limpiamos la vieja
             if (ultimaCasillaApuntada != null && ultimaCasillaApuntada != casillaDetectada)
             {
                 LimpiarCasillaAnterior();
@@ -60,110 +74,278 @@ public class DungeonMasterController : MonoBehaviour
 
             if (casillaDetectada != null)
             {
-                // Validaciones estrictas de negocio para la invocación
-                bool esValida = !casillaDetectada.esObstaculo && 
-                                !casillaDetectada.estaOcupada && 
-                                casillaDetectada.estaEnNiebla;
+                bool esValida = EsCasillaValidaParaInvocacion(casillaDetectada);
 
                 if (esValida)
                 {
-                    // Efecto visual de apuntado (Hover)
                     if (ultimaCasillaApuntada != casillaDetectada)
                     {
                         casillaDetectada.SetearEstadoVisual("DM_Target");
                         ultimaCasillaApuntada = casillaDetectada;
+
+                        Debug.Log(
+                            "[DungeonMasterController] Casilla válida apuntada: " +
+                            casillaDetectada.name +
+                            " | X = " + casillaDetectada.coordenadaX +
+                            " | Z = " + casillaDetectada.coordenadaZ
+                        );
                     }
 
-                    // Confirmación e Instanciación al apretar el gatillo del control de VR
-                    bool gatilloApretado = botonConfirmar != null && botonConfirmar.action.WasPressedThisFrame();
-                    
+                    bool gatilloApretado =
+                        botonConfirmar != null &&
+                        botonConfirmar.action.WasPressedThisFrame();
+
                     if (gatilloApretado)
                     {
-                        InvocarEnemigo(casillaDetectada);
+                        SolicitarInvocacion(casillaDetectada);
                     }
                 }
                 else
                 {
-                    // Si apuntamos a una casilla pero no es válida, limpiamos el hover si había uno
                     LimpiarCasillaAnterior();
                 }
             }
         }
         else
         {
-            // Si el raycast sale del tablero o no golpea nada, limpiamos
             LimpiarCasillaAnterior();
         }
     }
 
-    /// <summary>
-    /// Limpia el estado visual de la última casilla apuntada, devolviéndola a la niebla.
-    /// </summary>
-    private void LimpiarCasillaAnterior()
+    public void AlternarModoInvocacion()
     {
-        if (ultimaCasillaApuntada != null)
+        if (!PuedeUsarModoInvocacionLocal())
         {
-            // Como las invocaciones solo se pueden hacer en casillas con niebla, 
-            // siempre devolvemos el estado visual a "Niebla".
-            ultimaCasillaApuntada.SetearEstadoVisual("Niebla");
-            ultimaCasillaApuntada = null;
-        }
-    }
-
-    /// <summary>
-    /// Invoca el monstruo en la casilla objetivo y actualiza el estado del juego.
-    /// </summary>
-    private void InvocarEnemigo(CasillaComponent casilla)
-    {
-        if (prefabEnemigo == null)
-        {
-            Debug.LogError("[DungeonMaster] No hay Prefab Enemigo asignado en el DungeonMasterController.");
+            Debug.LogWarning("[DungeonMasterController] No puedes activar invocación. No eres DM o no es tu turno.");
             return;
         }
 
-        // 1. Instanciamos el prefab físicamente
-        GameObject nuevoEnemigo = Instantiate(prefabEnemigo, casilla.ObtenerCentro(), Quaternion.identity);
+        estaEnModoInvocacion = !estaEnModoInvocacion;
 
-        // 1.5 Le inyectamos sus coordenadas iniciales para que la IA sepa dónde nació
-        FichaEnemigoAI ia = nuevoEnemigo.GetComponent<FichaEnemigoAI>();
-        if (ia != null)
+        if (estaEnModoInvocacion)
         {
-            ia.coordenadaX = casilla.coordenadaX;
-            ia.coordenadaZ = casilla.coordenadaZ;
+            Debug.Log("[DungeonMasterController] Modo Invocación ACTIVADO.");
+        }
+        else
+        {
+            Debug.Log("[DungeonMasterController] Modo Invocación CANCELADO.");
+            LimpiarCasillaAnterior();
+        }
+    }
+
+    private bool PuedeUsarModoInvocacionLocal()
+    {
+        if (GameplayManager.Instance == null)
+            return false;
+
+        if (TurnManager.Instance == null)
+            return false;
+
+        if (GameplayManager.Instance.LocalPlayerRole != "Dungeon Master")
+            return false;
+
+        if (!TurnManager.Instance.IsMyTurn())
+            return false;
+
+        return true;
+    }
+
+    private bool EsCasillaValidaParaInvocacion(CasillaComponent casilla)
+    {
+        if (casilla == null)
+            return false;
+
+        bool esValida =
+            !casilla.esObstaculo &&
+            !casilla.estaOcupada &&
+            casilla.estaEnNiebla;
+
+        return esValida;
+    }
+
+    private void SolicitarInvocacion(CasillaComponent casilla)
+    {
+        if (casilla == null)
+            return;
+
+        if (Runner == null)
+        {
+            Debug.LogError("[DungeonMasterController] No hay Runner. No se puede invocar enemigo en red.");
+            return;
         }
 
-        // 2. Ocupamos la casilla a nivel de arquitectura
+        Debug.Log(
+            "[DungeonMasterController] Solicitando invocación al host. " +
+            "Solicitante = " + Runner.LocalPlayer +
+            " | Casilla = " + casilla.name +
+            " | X = " + casilla.coordenadaX +
+            " | Z = " + casilla.coordenadaZ
+        );
+
+        RPC_RequestInvocarEnemigo(
+            Runner.LocalPlayer,
+            casilla.coordenadaX,
+            casilla.coordenadaZ
+        );
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestInvocarEnemigo(PlayerRef requester, int x, int z)
+    {
+        Debug.Log(
+            "[DungeonMasterController HOST] Petición recibida para invocar enemigo. " +
+            "Requester = " + requester +
+            " | X = " + x +
+            " | Z = " + z
+        );
+
+        if (!EsTurnoDePlayer(requester))
+        {
+            Debug.LogWarning(
+                "[DungeonMasterController HOST] Invocación rechazada. No es turno de " +
+                requester
+            );
+            return;
+        }
+
+        string rolSolicitante = ObtenerRolDePlayer(requester);
+
+        if (rolSolicitante != "Dungeon Master")
+        {
+            Debug.LogWarning(
+                "[DungeonMasterController HOST] Invocación rechazada. " +
+                "El requester no es Dungeon Master. Rol = " + rolSolicitante
+            );
+            return;
+        }
+
+        if (GridManager.Instance == null)
+        {
+            Debug.LogError("[DungeonMasterController HOST] No existe GridManager.");
+            return;
+        }
+
+        Vector2Int coord = new Vector2Int(x, z);
+
+        if (!GridManager.Instance.DiccionarioTablero.TryGetValue(coord, out CasillaComponent casilla))
+        {
+            Debug.LogWarning("[DungeonMasterController HOST] No existe casilla en coordenada: " + coord);
+            return;
+        }
+
+        if (!EsCasillaValidaParaInvocacion(casilla))
+        {
+            Debug.LogWarning(
+                "[DungeonMasterController HOST] Casilla inválida para invocar. " +
+                "Ocupada = " + casilla.estaOcupada +
+                " | Obstáculo = " + casilla.esObstaculo +
+                " | EnNiebla = " + casilla.estaEnNiebla
+            );
+            return;
+        }
+
+        NetworkObject enemigo = Runner.Spawn(
+            prefabEnemigo,
+            casilla.ObtenerCentro(),
+            Quaternion.identity,
+            null,
+            (runner, obj) =>
+            {
+                FichaEnemigoAI ia = obj.GetComponent<FichaEnemigoAI>();
+
+                if (ia != null)
+                {
+                    ia.ConfigurarInicialEnRed(x, z);
+                }
+                else
+                {
+                    Debug.LogWarning("[DungeonMasterController HOST] El prefab enemigo no tiene FichaEnemigoAI.");
+                }
+            }
+        );
+
         casilla.estaOcupada = true;
 
-        // 3. Salimos del modo invocación y limpiamos rastro visual
+        Debug.Log(
+            "[DungeonMasterController HOST] Enemigo spawneado en red. " +
+            "NetworkObject = " + enemigo.name +
+            " | X = " + x +
+            " | Z = " + z
+        );
+
+        if (GridManager.Instance != null)
+        {
+            GridManager.Instance.ActualizarNieblaDeGuerraGlobal();
+        }
+
+        RPC_NotificarInvocacionRealizada(x, z);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_NotificarInvocacionRealizada(int x, int z)
+    {
+        Debug.Log(
+            "[DungeonMasterController TODOS] Enemigo invocado y sincronizado. " +
+            "X = " + x +
+            " | Z = " + z
+        );
+
         estaEnModoInvocacion = false;
         LimpiarCasillaAnterior();
 
-        Debug.Log($"<color=red>[DungeonMaster] ¡Enemigo invocado en las sombras de la casilla {casilla.name}!</color>");
-
-        // 4. Refrescamos la niebla de guerra global
         if (GridManager.Instance != null)
         {
             GridManager.Instance.ActualizarNieblaDeGuerraGlobal();
         }
     }
 
-    /// <summary>
-    /// Llama a este método desde el evento OnClick de tu UI.
-    /// Funciona como un interruptor (Toggle): lo enciende si estaba apagado, y viceversa.
-    /// </summary>
-    public void AlternarModoInvocacion()
+    private bool EsTurnoDePlayer(PlayerRef player)
     {
-        estaEnModoInvocacion = !estaEnModoInvocacion;
-        
-        if (estaEnModoInvocacion)
+        if (GameplayManager.Instance == null)
+            return false;
+
+        if (TurnManager.Instance == null)
+            return false;
+
+        if (GameplayManager.Instance.TurnOrder == null ||
+            GameplayManager.Instance.TurnOrder.Count == 0)
+            return false;
+
+        int index = TurnManager.Instance.CurrentTurnIndex;
+
+        if (index < 0 || index >= GameplayManager.Instance.TurnOrder.Count)
+            index = 0;
+
+        return GameplayManager.Instance.TurnOrder[index].PlayerRef == player;
+    }
+
+    private string ObtenerRolDePlayer(PlayerRef player)
+    {
+        if (GameplayManager.Instance != null &&
+            GameplayManager.Instance.TurnOrder != null)
         {
-            Debug.Log("<color=magenta>[DungeonMaster] Modo Invocación ACTIVADO.</color>");
+            foreach (GameplayRoleCache.PlayerInfo info in GameplayManager.Instance.TurnOrder)
+            {
+                if (info.PlayerRef == player)
+                    return info.PlayerRole;
+            }
         }
-        else
+
+        foreach (GameplayRoleCache.PlayerInfo info in GameplayRoleCache.Players)
         {
-            Debug.Log("<color=magenta>[DungeonMaster] Modo Invocación CANCELADO.</color>");
-            LimpiarCasillaAnterior(); // Limpiamos la luz roja si se arrepintió
+            if (info.PlayerRef == player)
+                return info.PlayerRole;
+        }
+
+        return "Desconocido";
+    }
+
+    private void LimpiarCasillaAnterior()
+    {
+        if (ultimaCasillaApuntada != null)
+        {
+            ultimaCasillaApuntada.SetearEstadoVisual("Niebla");
+            ultimaCasillaApuntada = null;
         }
     }
 }

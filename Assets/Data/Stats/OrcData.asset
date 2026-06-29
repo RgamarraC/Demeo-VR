@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: OrcData
   m_EditorClassIdentifier: Assembly-CSharp::DemeoVR.Gameplay.PieceData
   pieceType: 2
-  maxHealth: 100
+  maxHealth: 50
   physicalDamage: 12
   magicDamage: 0
   armor: 5

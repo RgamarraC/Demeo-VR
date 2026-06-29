@@ -23,7 +23,7 @@ public class GameplayUIManager : MonoBehaviour
 
     private GameplayManager gameplayManager;
     private TurnManager turnManager;
-
+    public bool juegoTerminado = false;
     private void Start()
     {
         StartCoroutine(IniciarUI());
@@ -61,6 +61,12 @@ public class GameplayUIManager : MonoBehaviour
 
     private void Update()
     {
+        if (juegoTerminado)
+        {
+            DesactivarTodosLosBotones();
+            return;
+        }
+
         if (gameplayManager == null || turnManager == null)
             return;
 
@@ -156,6 +162,12 @@ public class GameplayUIManager : MonoBehaviour
 
     public void OnEndTurnPressed()
     {
+        if (juegoTerminado)
+        {
+            Debug.Log("GAMEPLAY UI: No puedes finalizar turno. El juego ya terminó.");
+            return;
+        }
+
         if (!turnManager.IsMyTurn())
         {
             Debug.Log("GAMEPLAY UI: No es tu turno.");
@@ -164,6 +176,11 @@ public class GameplayUIManager : MonoBehaviour
 
         Debug.Log("GAMEPLAY UI: End Turn presionado por " + gameplayManager.LocalPlayerName);
 
+        if (EsDM() && BoardCombatManager.Instance != null)
+        {
+            BoardCombatManager.Instance.RequestEnemyAttacksBeforeDMEndTurn();
+        }
+
         turnManager.EndTurn();
 
         ActualizarBotones();
@@ -171,6 +188,12 @@ public class GameplayUIManager : MonoBehaviour
 
     public void OnAtacarPressed()
     {
+        if (juegoTerminado)
+        {
+            Debug.Log("GAMEPLAY UI: No puedes atacar. El juego ya terminó.");
+            return;
+        }
+
         if (!turnManager.IsMyTurn())
         {
             Debug.Log("GAMEPLAY UI: No puedes atacar porque no es tu turno.");
@@ -178,6 +201,15 @@ public class GameplayUIManager : MonoBehaviour
         }
 
         Debug.Log("GAMEPLAY UI: Atacar presionado.");
+
+        if (BoardCombatManager.Instance != null)
+        {
+            BoardCombatManager.Instance.RequestHeroAttackFromButton();
+        }
+        else
+        {
+            Debug.LogWarning("GAMEPLAY UI: No existe BoardCombatManager en la escena.");
+        }
     }
 
     public void OnInvocarEnemigoPressed()
@@ -200,5 +232,22 @@ public class GameplayUIManager : MonoBehaviour
         }
 
         Debug.Log("GAMEPLAY UI: Invocar trampa presionado.");
+    }
+    public void BloquearUIFinJuego()
+    {
+        juegoTerminado = true;
+        DesactivarTodosLosBotones();
+
+        Debug.Log("GAMEPLAY UI: Botones bloqueados por fin de juego.");
+    }
+
+    private void DesactivarTodosLosBotones()
+    {
+        SetButtonInteractable(botonAtacar, false);
+        SetButtonInteractable(botonEndTurnHeroe, false);
+
+        SetButtonInteractable(botonInvocarEnemigo, false);
+        SetButtonInteractable(botonInvocarTrampa, false);
+        SetButtonInteractable(botonEndTurnDM, false);
     }
 }

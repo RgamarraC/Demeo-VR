@@ -1,56 +1,187 @@
 using UnityEngine;
-using DemeoVR.Gameplay; // Por si usas PieceData aquí
+using DemeoVR.Gameplay;
 using System.Linq;
+using Fusion;
 
-public class FichaEnemigoAI : MonoBehaviour
+public class FichaEnemigoAI : NetworkBehaviour
 {
     [Header("Estadísticas (ScriptableObject)")]
-    // NOTA: Usé PieceData porque es el script que me mostraste anteriormente. 
-    // Si creaste uno nuevo llamado PersonajeData, simplemente cambia el tipo aquí.
     [SerializeField] private PieceData statsData;
-    
+
     [Header("Restricciones")]
-    [Tooltip("Define tanto el rango de visión (aggro) como el límite de casillas que puede saltar.")]
+    [Tooltip("Define tanto el rango de visión como el movimiento del enemigo.")]
     public int rangoMovimiento = 3;
 
-    [Header("Estado en la Grilla")]
-    public int coordenadaX;
-    public int coordenadaZ; // Uso Z para mantener consistencia con la refactorización anterior del tablero
-    [SerializeField] private int vidaActual;
+    [Header("Estado en Red")]
+    [Networked] public int CoordenadaX { get; set; }
+    [Networked] public int CoordenadaZ { get; set; }
+    [Networked] public int VidaActual { get; set; }
+    [Networked] public bool Inicializado { get; set; }
 
-    private void Start()
+    // Compatibilidad con scripts que aún usan nombres antiguos
+    public int coordenadaX
+    {
+        get { return CoordenadaX; }
+        set { CoordenadaX = value; }
+    }
+
+    public int coordenadaZ
+    {
+        get { return CoordenadaZ; }
+        set { CoordenadaZ = value; }
+    }
+
+    private bool tieneCoordRegistrada = false;
+    private Vector2Int ultimaCoordRegistrada;
+
+    public override void Spawned()
+    {
+        Debug.Log(
+            "[FichaEnemigoAI] Spawned en red. " +
+            "Nombre = " + gameObject.name +
+            " | StateAuthority = " + Object.HasStateAuthority +
+            " | InputAuthority = " + Object.HasInputAuthority
+        );
+
+        if (Object.HasStateAuthority && VidaActual <= 0)
+        {
+            VidaActual = ObtenerVidaBase();
+        }
+
+        SincronizarRegistroLocalConGrid();
+    }
+
+    private void Update()
+    {
+        if (!Inicializado)
+            return;
+
+        SincronizarRegistroLocalConGrid();
+    }
+
+    public void ConfigurarInicialEnRed(int x, int z)
+    {
+        CoordenadaX = x;
+        CoordenadaZ = z;
+        VidaActual = ObtenerVidaBase();
+        Inicializado = true;
+
+        Debug.Log(
+            "[FichaEnemigoAI HOST] Configuración inicial asignada. " +
+            "X = " + CoordenadaX +
+            " | Z = " + CoordenadaZ +
+            " | Vida = " + VidaActual
+        );
+    }
+
+    private int ObtenerVidaBase()
     {
         if (statsData != null)
+            return statsData.maxHealth;
+
+        return 6;
+    }
+
+    private void SincronizarRegistroLocalConGrid()
+    {
+        if (GridManager.Instance == null)
+            return;
+
+        Vector2Int coordActual = new Vector2Int(CoordenadaX, CoordenadaZ);
+
+        if (tieneCoordRegistrada && ultimaCoordRegistrada == coordActual)
+            return;
+
+        if (tieneCoordRegistrada)
         {
-            vidaActual = statsData.maxHealth; // Asumo maxHealth basado en tu PieceData real
+            if (GridManager.Instance.DiccionarioTablero.TryGetValue(
+                    ultimaCoordRegistrada,
+                    out CasillaComponent casillaAnterior))
+            {
+                casillaAnterior.estaOcupada = false;
+            }
+        }
+
+        if (GridManager.Instance.DiccionarioTablero.TryGetValue(
+                coordActual,
+                out CasillaComponent nuevaCasilla))
+        {
+            nuevaCasilla.estaOcupada = true;
+
+            transform.position = nuevaCasilla.ObtenerCentro();
+            transform.rotation = Quaternion.identity;
+
+            ultimaCoordRegistrada = coordActual;
+            tieneCoordRegistrada = true;
+
+            Debug.Log(
+                "[FichaEnemigoAI] Registro local actualizado en grid. " +
+                "Coord = " + coordActual +
+                " | Vida = " + VidaActual +
+                " | StateAuthority = " + Object.HasStateAuthority
+            );
+
+            GridManager.Instance.ActualizarNieblaDeGuerraGlobal();
+        }
+        else
+        {
+            Debug.LogWarning("[FichaEnemigoAI] No se encontró casilla para coord: " + coordActual);
         }
     }
 
-    /// <summary>
-    /// Método principal llamado por el Gestor de Turnos (TurnManager).
-    /// </summary>
-    [ContextMenu("Simular Turno (Test)")]
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (GridManager.Instance != null && tieneCoordRegistrada)
+        {
+            if (GridManager.Instance.DiccionarioTablero.TryGetValue(
+                    ultimaCoordRegistrada,
+                    out CasillaComponent casilla))
+            {
+                casilla.estaOcupada = false;
+            }
+
+            GridManager.Instance.ActualizarNieblaDeGuerraGlobal();
+        }
+
+        Debug.Log("[FichaEnemigoAI] Despawned. Enemigo eliminado de la red.");
+    }
+
+    [ContextMenu("Simular Turno IA")]
     public void EjecutarTurnoIA()
     {
-        Debug.Log($"<color=red>[IA] Turno de {gameObject.name} iniciado.</color>");
+        if (Object != null && !Object.HasStateAuthority)
+        {
+            Debug.Log("[FichaEnemigoAI] IA ignorada en cliente. Solo el host ejecuta la IA.");
+            return;
+        }
 
-        if (GridManager.Instance == null) return;
+        Debug.Log("[FichaEnemigoAI HOST] Turno de IA iniciado para " + gameObject.name);
 
-        // 1. Buscar Héroes en el tablero
-        FichaRPG[] todosLosHeroes = Object.FindObjectsByType<FichaRPG>(FindObjectsSortMode.None)
-                                          .Where(f => f.esHeroe && f.casillaActual != null).ToArray();
+        if (GridManager.Instance == null)
+        {
+            Debug.LogWarning("[FichaEnemigoAI HOST] No hay GridManager.");
+            return;
+        }
 
-        if (todosLosHeroes.Length == 0) return;
+        FichaRPG[] todosLosHeroes =
+            FindObjectsByType<FichaRPG>(FindObjectsSortMode.None)
+            .Where(f => f.esHeroe && f.casillaActual != null)
+            .ToArray();
+
+        if (todosLosHeroes.Length == 0)
+        {
+            Debug.Log("[FichaEnemigoAI HOST] No se encontraron héroes.");
+            return;
+        }
 
         FichaRPG heroeObjetivo = null;
         int distanciaMinima = int.MaxValue;
 
-        // 2. Calcular Distancia de Visión y fijar Aggro al más cercano
-        // El rango de visión es igual al rango de movimiento, según tu indicación.
-        foreach (var heroe in todosLosHeroes)
+        foreach (FichaRPG heroe in todosLosHeroes)
         {
-            int distancia = Mathf.Abs(coordenadaX - heroe.casillaActual.coordenadaX) + 
-                            Mathf.Abs(coordenadaZ - heroe.casillaActual.coordenadaZ);
+            int distancia =
+                Mathf.Abs(CoordenadaX - heroe.casillaActual.coordenadaX) +
+                Mathf.Abs(CoordenadaZ - heroe.casillaActual.coordenadaZ);
 
             if (distancia <= rangoMovimiento && distancia < distanciaMinima)
             {
@@ -61,77 +192,99 @@ public class FichaEnemigoAI : MonoBehaviour
 
         if (heroeObjetivo == null)
         {
-            Debug.Log("[IA] Ningún héroe en rango de visión.");
+            Debug.Log("[FichaEnemigoAI HOST] Ningún héroe en rango de visión.");
             return;
         }
 
-        Debug.Log($"[IA] Héroe fijado: {heroeObjetivo.name} a distancia {distanciaMinima}");
+        Debug.Log(
+            "[FichaEnemigoAI HOST] Héroe objetivo: " +
+            heroeObjetivo.name +
+            " | Distancia = " + distanciaMinima
+        );
 
-        // 3. Buscar Casilla de Ataque Adyacente al héroe
-        Vector2Int coordHeroe = new Vector2Int(heroeObjetivo.casillaActual.coordenadaX, heroeObjetivo.casillaActual.coordenadaZ);
+        Vector2Int coordHeroe =
+            new Vector2Int(
+                heroeObjetivo.casillaActual.coordenadaX,
+                heroeObjetivo.casillaActual.coordenadaZ
+            );
+
         Vector2Int[] direccionesAdyacentes = new Vector2Int[]
         {
-            new Vector2Int(0, 1),  // Norte
-            new Vector2Int(0, -1), // Sur
-            new Vector2Int(1, 0),  // Este
-            new Vector2Int(-1, 0)  // Oeste
+            new Vector2Int(0, 1),
+            new Vector2Int(0, -1),
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0)
         };
 
         CasillaComponent casillaElegida = null;
         int distanciaHaciaCasillaElegida = int.MaxValue;
 
-        foreach (var dir in direccionesAdyacentes)
+        foreach (Vector2Int dir in direccionesAdyacentes)
         {
             Vector2Int coordAdyacente = coordHeroe + dir;
 
-            if (GridManager.Instance.DiccionarioTablero.TryGetValue(coordAdyacente, out CasillaComponent casillaVecina))
+            if (GridManager.Instance.DiccionarioTablero.TryGetValue(
+                    coordAdyacente,
+                    out CasillaComponent casillaVecina))
             {
                 if (!casillaVecina.esObstaculo && !casillaVecina.estaOcupada)
                 {
-                    // Calculamos a qué distancia está esta casilla de la posición actual del Orco
-                    int distOrcoACasilla = Mathf.Abs(coordenadaX - casillaVecina.coordenadaX) + 
-                                           Mathf.Abs(coordenadaZ - casillaVecina.coordenadaZ);
+                    int distanciaOrcoACasilla =
+                        Mathf.Abs(CoordenadaX - casillaVecina.coordenadaX) +
+                        Mathf.Abs(CoordenadaZ - casillaVecina.coordenadaZ);
 
-                    // Nos quedamos con la casilla libre que nos quede más cerca para caminar
-                    if (distOrcoACasilla < distanciaHaciaCasillaElegida)
+                    if (distanciaOrcoACasilla < distanciaHaciaCasillaElegida)
                     {
-                        distanciaHaciaCasillaElegida = distOrcoACasilla;
+                        distanciaHaciaCasillaElegida = distanciaOrcoACasilla;
                         casillaElegida = casillaVecina;
                     }
                 }
             }
         }
 
-        // 4. Ejecutar Desplazamiento Físico y Lógico
-        // Como validamos que el héroe estuviera dentro de rangoMovimiento, 
-        // y nos colocamos en una casilla adyacente a él, 
-        // sabemos que también está dentro del rango de salto físico del enemigo.
         if (casillaElegida != null && distanciaHaciaCasillaElegida <= rangoMovimiento)
         {
-            // Liberar casilla actual
-            Vector2Int coordActual = new Vector2Int(coordenadaX, coordenadaZ);
-            if (GridManager.Instance.DiccionarioTablero.TryGetValue(coordActual, out CasillaComponent casillaVieja))
-            {
-                casillaVieja.estaOcupada = false;
-            }
+            CoordenadaX = casillaElegida.coordenadaX;
+            CoordenadaZ = casillaElegida.coordenadaZ;
 
-            // Actualizar coordenadas internas del Orco
-            coordenadaX = casillaElegida.coordenadaX;
-            coordenadaZ = casillaElegida.coordenadaZ;
-
-            // Bloquear nueva casilla
-            casillaElegida.estaOcupada = true;
-
-            // Teletransportar al centro
             transform.position = casillaElegida.ObtenerCentro();
-            
-            Debug.Log($"[IA] Orco movido a la casilla ({coordenadaX}, {coordenadaZ}) y preparado para atacar.");
-            
-            // Opcional: Actualizar niebla si quieres que el Orco revele zonas, aunque usualmente solo los héroes revelan.
+
+            SincronizarRegistroLocalConGrid();
+
+            Debug.Log(
+                "[FichaEnemigoAI HOST] Enemigo movido en red a " +
+                "(" + CoordenadaX + ", " + CoordenadaZ + ")"
+            );
         }
         else
         {
-            Debug.Log("[IA] No hay casillas adyacentes libres o están fuera del rango de movimiento.");
+            Debug.Log("[FichaEnemigoAI HOST] No hay casilla válida para moverse.");
+        }
+    }
+
+    public void RequestDamage(int damage)
+    {
+        RPC_RequestDamage(damage);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestDamage(int damage)
+    {
+        VidaActual -= damage;
+
+        Debug.Log(
+            "[FichaEnemigoAI HOST] Enemigo recibió daño. " +
+            "Daño = " + damage +
+            " | Vida restante = " + VidaActual
+        );
+
+        if (VidaActual <= 0)
+        {
+            VidaActual = 0;
+
+            Debug.Log("[FichaEnemigoAI HOST] Vida llegó a 0. Despawneando enemigo.");
+
+            Runner.Despawn(Object);
         }
     }
 }
