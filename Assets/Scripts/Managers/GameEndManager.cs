@@ -320,7 +320,20 @@ public class GameEndManager : NetworkBehaviour
             " | Mensaje = " + mensajeFinal
         );
     }
+    public void TerminarJuegoHeroesGanan()
+    {
+        if (!Object.HasStateAuthority)
+            return;
 
+        if (juegoTerminado)
+            return;
+
+        juegoTerminado = true;
+
+        Debug.Log("[GameEndManager HOST] FIN DEL JUEGO. Ganan los héroes.");
+
+        RPC_MostrarGameOver("HEROES_WIN");
+    }
     private void OcultarPanelGameOver()
     {
         if (panelGameOver != null)

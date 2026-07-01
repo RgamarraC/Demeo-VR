@@ -88,8 +88,6 @@ public class GameplayUIManager : MonoBehaviour
         if (botonInvocarEnemigo != null)
             botonInvocarEnemigo.onClick.AddListener(OnInvocarEnemigoPressed);
 
-        if (botonInvocarTrampa != null)
-            botonInvocarTrampa.onClick.AddListener(OnInvocarTrampaPressed);
     }
 
     private void MostrarUIPorRol()
@@ -223,16 +221,6 @@ public class GameplayUIManager : MonoBehaviour
         Debug.Log("GAMEPLAY UI: Invocar enemigo presionado.");
     }
 
-    public void OnInvocarTrampaPressed()
-    {
-        if (!turnManager.IsMyTurn())
-        {
-            Debug.Log("GAMEPLAY UI: No puedes invocar trampa porque no es tu turno.");
-            return;
-        }
-
-        Debug.Log("GAMEPLAY UI: Invocar trampa presionado.");
-    }
     public void BloquearUIFinJuego()
     {
         juegoTerminado = true;

@@ -406,5 +406,24 @@ namespace DemeoVR.Gameplay
                 "Objeto = " + gameObject.name
             );
         }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    public void RPC_RequestColocarEnCasilla(int x, int z)
+    {
+        RPC_MudarFichaATodos(x, z);
     }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void RPC_MudarFichaATodos(int x, int z)
+    {
+        FichaRPG ficha = GetComponent<FichaRPG>();
+        if (ficha != null)
+        {
+            if (GridManager.Instance != null && GridManager.Instance.DiccionarioTablero.TryGetValue(new Vector2Int(x, z), out CasillaComponent casilla))
+            {
+                ficha.ColocarEnCasillaDesdeRed(casilla);
+            }
+        }
+    }
+}
 }

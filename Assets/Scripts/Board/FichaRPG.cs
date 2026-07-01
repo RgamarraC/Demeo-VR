@@ -265,17 +265,60 @@ public class FichaRPG : MonoBehaviour
     {
         if (nuevaCasilla == null)
         {
-            Debug.LogWarning("[FichaRPG] ColocarEnCasilla recibió una casilla NULL.");
+            RegresarACasillaActual();
             return;
         }
 
-        if (casillaActual != null)
+        if (CasillaEstaBloqueadaParaHeroe(nuevaCasilla))
+        {
+            Debug.Log(
+                "[FichaRPG] No puedes colocar la ficha en esa casilla. " +
+                "Está bloqueada u ocupada. X = " +
+                nuevaCasilla.coordenadaX +
+                " | Z = " +
+                nuevaCasilla.coordenadaZ
+            );
+
+            RegresarACasillaActual();
+            return;
+        }
+
+        // 1. Aplicar colocación lógica y física de forma local
+        ColocarEnCasillaDesdeRed(nuevaCasilla);
+
+        // 2. Sincronizar en red por medio de BoardPiece si aplica
+        BoardPiece boardPiece = GetComponent<BoardPiece>();
+        if (boardPiece != null && boardPiece.Object != null)
+        {
+            if (!boardPiece.Object.HasStateAuthority)
+            {
+                // El cliente solicita al host que replique la casilla
+                boardPiece.RPC_RequestColocarEnCasilla(nuevaCasilla.coordenadaX, nuevaCasilla.coordenadaZ);
+            }
+            else
+            {
+                // El host retransmite directamente a todos los clientes
+                boardPiece.RPC_MudarFichaATodos(nuevaCasilla.coordenadaX, nuevaCasilla.coordenadaZ);
+            }
+        }
+    }
+
+    public void ColocarEnCasillaDesdeRed(CasillaComponent nuevaCasilla)
+    {
+        if (nuevaCasilla == null)
+            return;
+
+        if (casillaActual != null && casillaActual != nuevaCasilla)
         {
             casillaActual.estaOcupada = false;
         }
 
         casillaActual = nuevaCasilla;
         casillaActual.estaOcupada = true;
+
+        IniciarReposicionamiento(nuevaCasilla);
+
+        Rigidbody rb = GetComponent<Rigidbody>();
 
         if (rb != null)
         {
@@ -284,25 +327,42 @@ public class FichaRPG : MonoBehaviour
             rb.isKinematic = true;
         }
 
-        _ = FadeposAsync(nuevaCasilla);
-
         Debug.Log(
-            "[FichaRPG] Ficha colocada en casilla. " +
-            "Ficha = " + gameObject.name +
-            " | Casilla = " + casillaActual.name +
-            " | X = " + casillaActual.coordenadaX +
-            " | Z = " + casillaActual.coordenadaZ
+            "[FichaRPG] Ficha colocada lógicamente en casilla: " +
+            nuevaCasilla.coordenadaX + ", " +
+            nuevaCasilla.coordenadaZ
         );
     }
-    private async Task FadeposAsync(CasillaComponent nuevaCasilla)
+
+    private Coroutine reposicionarCoroutine;
+
+    private void IniciarReposicionamiento(CasillaComponent casilla)
     {
-        Vector3 posicionFinal = casillaActual.ObtenerCentro();
-        posicionFinal.y = alturaSobreCasilla;
+        if (reposicionarCoroutine != null)
+        {
+            StopCoroutine(reposicionarCoroutine);
+        }
+        reposicionarCoroutine = StartCoroutine(ReposicionarEnCasillaCoroutine(casilla));
+    }
 
-        await Task.Delay(200);
+    private IEnumerator ReposicionarEnCasillaCoroutine(CasillaComponent casilla)
+    {
+        yield return new WaitForSeconds(0.2f);
 
-        transform.rotation = Quaternion.identity;
-        transform.position = posicionFinal;
+        if (casilla != null)
+        {
+            transform.rotation = Quaternion.identity;
+            transform.position = ObtenerPosicionFijaEnCasilla(casilla);
+
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+            }
+        }
+        reposicionarCoroutine = null;
     }
 
     public void ColocarEnCasillaInicial(CasillaComponent nuevaCasilla)
@@ -449,8 +509,9 @@ public class FichaRPG : MonoBehaviour
 
         if (casillaActual != null)
         {
-            transform.position = casillaActual.ObtenerCentro();
-            transform.rotation = Quaternion.identity;
+            //transform.position = casillaActual.ObtenerCentro();
+            //transform.rotation = Quaternion.identity;
+            IniciarReposicionamiento(casillaActual);
             casillaActual.estaOcupada = true;
         }
     }
@@ -527,5 +588,53 @@ public class FichaRPG : MonoBehaviour
             return "Sin TurnManager";
 
         return TurnManager.Instance.IsMyTurn().ToString();
+    }
+    private Vector3 ObtenerPosicionFijaEnCasilla(CasillaComponent casilla)
+    {
+        Vector3 posicion = casilla.ObtenerCentro();
+        posicion.y += alturaSobreCasilla;
+        return posicion;
+    }
+    private bool CasillaEstaBloqueadaParaHeroe(CasillaComponent casillaDestino)
+    {
+        if (casillaDestino == null)
+            return true;
+
+        if (casillaDestino.esObstaculo)
+            return true;
+
+        // Si es la misma casilla donde ya estoy, no la bloqueo contra mí mismo
+        if (casillaDestino == casillaActual)
+            return false;
+
+        // Esto representa otra ficha o enemigo ocupando esa casilla
+        if (casillaDestino.estaOcupada)
+            return true;
+
+        return false;
+    }
+    private void RegresarACasillaActual()
+    {
+        if (casillaActual == null)
+            return;
+
+        casillaActual.estaOcupada = true;
+
+        IniciarReposicionamiento(casillaActual);
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        Debug.Log(
+            "[FichaRPG] Movimiento cancelado. La ficha regresó a su casilla actual: " +
+            casillaActual.coordenadaX + ", " +
+            casillaActual.coordenadaZ
+        );
     }
 }
