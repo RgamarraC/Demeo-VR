@@ -18,7 +18,7 @@ MonoBehaviour:
   magicDamage: 5
   armor: 2
   magicResistance: 1
-  maxAP: 2
+  maxAP: 15
   hpGrowth: 20
   physicalDamageGrowth: 3
   magicDamageGrowth: 2
