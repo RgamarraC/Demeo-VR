@@ -24,6 +24,10 @@ public class GameplayUIManager : MonoBehaviour
     private GameplayManager gameplayManager;
     private TurnManager turnManager;
     public bool juegoTerminado = false;
+
+    public Image backgroundImage;
+    public Sprite canvasturnOn;
+    public Sprite canvasturnOff;
     private void Start()
     {
         StartCoroutine(IniciarUI());
@@ -126,18 +130,19 @@ public class GameplayUIManager : MonoBehaviour
     private void ActualizarBotones()
     {
         bool esMiTurno = turnManager.IsMyTurn();
-
+        backgroundImage.sprite = esMiTurno ? canvasturnOn : canvasturnOff;
+        
         if (EsHeroe())
         {
-            SetButtonInteractable(botonAtacar, esMiTurno);
-            SetButtonInteractable(botonEndTurnHeroe, esMiTurno);
+            botonAtacar.interactable = esMiTurno;
+            botonEndTurnHeroe.interactable = esMiTurno;
         }
 
         if (EsDM())
         {
-            SetButtonInteractable(botonInvocarEnemigo, esMiTurno);
-            SetButtonInteractable(botonInvocarTrampa, esMiTurno);
-            SetButtonInteractable(botonEndTurnDM, esMiTurno);
+            botonInvocarEnemigo.interactable = esMiTurno;
+            botonInvocarTrampa.interactable = esMiTurno;
+            botonEndTurnDM.interactable = esMiTurno;
         }
     }
 

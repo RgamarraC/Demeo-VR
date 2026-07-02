@@ -296,7 +296,7 @@ public class GameEndManager : NetworkBehaviour
             textoGameOver.text = mensajeFinal;
 
         if (botonVolverLobby != null)
-            botonVolverLobby.interactable = false;
+            botonVolverLobby.interactable = true;
 
         GameplayUIManager uiManager = FindFirstObjectByType<GameplayUIManager>();
 

@@ -420,8 +420,9 @@ public class LobbyGenerator : MonoBehaviour
         LobbyPlayerData[] players =
             FindObjectsByType<LobbyPlayerData>(FindObjectsSortMode.None);
 
-        string[] nombres = new string[3] { "Vacío", "Vacío", "Vacío" };
-        string[] roles = new string[3] { "-", "-", "-" };
+        string[] nombres = new string[3] { "", "", "" };
+        string[] roles = new string[3] { "", "", "" };
+        bool[] slotsOcupados = new bool[3] { false, false, false };
 
         int count = 0;
 
@@ -439,6 +440,7 @@ public class LobbyGenerator : MonoBehaviour
                 slot = player.SlotIndex;
                 nombre = player.PlayerName.ToString();
                 rolJugador = player.PlayerRole.ToString();
+                slotsOcupados[slot] = true;
             }
             catch (System.InvalidOperationException)
             {
@@ -446,31 +448,32 @@ public class LobbyGenerator : MonoBehaviour
             }
 
             if (slot < 0 || slot >= 3)
-                continue;
+                continue;            
 
             if (string.IsNullOrEmpty(nombre))
                 nombre = "Player";
 
             if (string.IsNullOrEmpty(rolJugador))
                 rolJugador = "Sin rol";
+                
 
             nombres[slot] = nombre;
             roles[slot] = rolJugador;
-
+           
             count++;
         }
 
         if (textoJugadores != null)
             textoJugadores.text = count + "/3";
 
-        ActualizarSlotSeguro(slot1, nombres[0], roles[0]);
-        ActualizarSlotSeguro(slot2, nombres[1], roles[1]);
-        ActualizarSlotSeguro(slot3, nombres[2], roles[2]);
+        ActualizarSlotSeguro(slot1, nombres[0], roles[0] , slotsOcupados[0]);
+        ActualizarSlotSeguro(slot2, nombres[1], roles[1] , slotsOcupados[1]);
+        ActualizarSlotSeguro(slot3, nombres[2], roles[2] , slotsOcupados[2]);
 
         GuardarDatosParaGameplay(false);
     }
 
-    private void ActualizarSlotSeguro(PlayerSlotUI slot, string nombre, string rol)
+    private void ActualizarSlotSeguro(PlayerSlotUI slot, string nombre, string rol,bool isActive)
     {
         if (slot == null)
         {
@@ -478,7 +481,7 @@ public class LobbyGenerator : MonoBehaviour
             return;
         }
 
-        slot.ActualizarSlot(nombre, rol);
+        slot.ActualizarSlot(nombre, rol ,isActive);
     }
 
     private void MostrarMensajeLobby(string mensaje)
@@ -624,9 +627,9 @@ private string NormalizarRol(string rol)
         codigoLobby = "";
         hostName = "";
 
-        ActualizarSlotSeguro(slot1, "Vacío", "-");
-        ActualizarSlotSeguro(slot2, "Vacío", "-");
-        ActualizarSlotSeguro(slot3, "Vacío", "-");
+        ActualizarSlotSeguro(slot1, "", "" , false);
+        ActualizarSlotSeguro(slot2, "", "" , false);
+        ActualizarSlotSeguro(slot3, "", "" , false);
 
         if (textoJugadores != null)
             textoJugadores.text = "0/3";
