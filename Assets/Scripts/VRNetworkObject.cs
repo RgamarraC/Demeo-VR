@@ -106,6 +106,16 @@ public class VRNetworkObject : NetworkBehaviour, IStateAuthorityChanged
         {
             RPC_ActualizarPosicionServidor(transform.position, transform.rotation, false);
         }
+        else
+        {
+            // Si somos la autoridad y el objeto no es una ficha de tablero (que maneja su propia cinemática),
+            // restauramos las físicas del Rigidbody localmente.
+            if (GetComponent<FichaRPG>() == null && _rb != null)
+            {
+                _rb.isKinematic = false;
+                _rb.WakeUp();
+            }
+        }
 
         Debug.Log($"[VRNetworkObject] Agarre terminado en {gameObject.name}. HasStateAuthority: {HasStateAuthority}");
     }
@@ -182,7 +192,12 @@ public class VRNetworkObject : NetworkBehaviour, IStateAuthorityChanged
     {
         if (HasStateAuthority)
         {
-            _rb.isKinematic = false;
+            // Solo desactivamos kinematic si no es una ficha de tablero, ya que las fichas
+            // controlan su propio estado de física y colocación.
+            if (GetComponent<FichaRPG>() == null && _rb != null)
+            {
+                _rb.isKinematic = false;
+            }
 
             // Si ya somos los dueños (por ejemplo, en Shared Mode) reactivamos NetworkTransform para sincro en tiempo real
             if (_isGrabbed && _netTransform != null)

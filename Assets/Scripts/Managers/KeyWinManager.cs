@@ -13,6 +13,7 @@ public class KeyWinManager : NetworkBehaviour
     [Header("Configuración")]
     [SerializeField] private float alturaLlave = 0.5f;
     [SerializeField] private float intervaloRevision = 0.25f;
+    [SerializeField] private int distanciaMinimaAlSpawn = 6;
 
     [Networked] private int KeyX { get; set; }
     [Networked] private int KeyZ { get; set; }
@@ -104,8 +105,59 @@ public class KeyWinManager : NetworkBehaviour
             return;
         }
 
-        int index = Random.Range(0, casillasValidas.Count);
-        CasillaComponent casillaElegida = casillasValidas[index];
+        // Filtramos para evitar que la llave aparezca muy cerca del spawn de héroes
+        List<CasillaComponent> casillasFiltradas = new List<CasillaComponent>();
+        List<CasillaComponent> casillasSpawn = new List<CasillaComponent>();
+
+        foreach (CasillaComponent casilla in casillas)
+        {
+            if (casilla != null && casilla.esSpawnHeroe)
+            {
+                casillasSpawn.Add(casilla);
+            }
+        }
+
+        if (casillasSpawn.Count > 0)
+        {
+            foreach (CasillaComponent casilla in casillasValidas)
+            {
+                bool muyCerca = false;
+                foreach (CasillaComponent spawn in casillasSpawn)
+                {
+                    int dx = Mathf.Abs(casilla.coordenadaX - spawn.coordenadaX);
+                    int dz = Mathf.Abs(casilla.coordenadaZ - spawn.coordenadaZ);
+                    int distGrid = Mathf.Max(dx, dz); // Distancia Chebyshev (pasos en tablero 8-direcciones)
+
+                    if (distGrid < distanciaMinimaAlSpawn)
+                    {
+                        muyCerca = true;
+                        break;
+                    }
+                }
+
+                if (!muyCerca)
+                {
+                    casillasFiltradas.Add(casilla);
+                }
+            }
+        }
+        else
+        {
+            casillasFiltradas = casillasValidas;
+        }
+
+        // Si no quedan casillas tras aplicar el filtro, ignoramos la restricción
+        if (casillasFiltradas.Count == 0)
+        {
+            Debug.LogWarning(
+                $"[KeyWinManager HOST] El filtro de distancia mínima ({distanciaMinimaAlSpawn}) " +
+                "dejó 0 casillas válidas. Usando todas las casillas disponibles."
+            );
+            casillasFiltradas = casillasValidas;
+        }
+
+        int index = Random.Range(0, casillasFiltradas.Count);
+        CasillaComponent casillaElegida = casillasFiltradas[index];
 
         KeyX = casillaElegida.coordenadaX;
         KeyZ = casillaElegida.coordenadaZ;

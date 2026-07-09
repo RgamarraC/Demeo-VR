@@ -513,6 +513,8 @@ public class FichaRPG : MonoBehaviour
             //transform.rotation = Quaternion.identity;
             IniciarReposicionamiento(casillaActual);
             casillaActual.estaOcupada = true;
+
+            SincronizarPosicionEnRed(casillaActual);
         }
     }
 
@@ -631,10 +633,31 @@ public class FichaRPG : MonoBehaviour
             rb.isKinematic = true;
         }
 
+        SincronizarPosicionEnRed(casillaActual);
+
         Debug.Log(
             "[FichaRPG] Movimiento cancelado. La ficha regresó a su casilla actual: " +
             casillaActual.coordenadaX + ", " +
             casillaActual.coordenadaZ
         );
+    }
+
+    private void SincronizarPosicionEnRed(CasillaComponent casilla)
+    {
+        if (casilla == null)
+            return;
+
+        BoardPiece boardPiece = GetComponent<BoardPiece>();
+        if (boardPiece != null && boardPiece.Object != null)
+        {
+            if (!boardPiece.Object.HasStateAuthority)
+            {
+                boardPiece.RPC_RequestColocarEnCasilla(casilla.coordenadaX, casilla.coordenadaZ);
+            }
+            else
+            {
+                boardPiece.RPC_MudarFichaATodos(casilla.coordenadaX, casilla.coordenadaZ);
+            }
+        }
     }
 }

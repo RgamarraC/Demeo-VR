@@ -12044,7 +12044,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 9078aca41a2e05740a537661b645e724, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 99fedefe92e2fe64da9a86e9ffc08805, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -17508,7 +17508,7 @@ MonoBehaviour:
     RawGuidValue: 7df524699deb44341b3693c8538df185
   prefabTrampaVisual: {fileID: 261544735784694547, guid: 37d91f3462e4bf943ac36da002324d59, type: 3}
   "da\xF1oTrampa": 20
-  alturaTrampa: 0.05
+  alturaTrampa: 0
   intervaloRevisionTrampa: 0.25
   estaEnModoTrampa: 0
   punteroVR: {fileID: 1133691550}
