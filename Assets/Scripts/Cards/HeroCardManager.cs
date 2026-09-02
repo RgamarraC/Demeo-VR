@@ -264,6 +264,7 @@ public class HeroCardManager : NetworkBehaviour
         RemoveCardAt(rolRequester, cardIndex);
 
         EjecutarCarta(carta, fichaHeroe, statsHeroe, rolRequester);
+        statsHeroe.MarkAttackUsed();
 
         Debug.Log(
             "[HeroCardManager HOST] Carta usada. " +

@@ -12,6 +12,8 @@ public static class GameplayRoleCache
 
     public static List<PlayerInfo> Players = new List<PlayerInfo>();
 
+    public static string LocalRole = "Heroe 1";
+
     public static void Clear()
     {
         Players.Clear();

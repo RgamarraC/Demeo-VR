@@ -51,6 +51,11 @@ public class LobbyPlayerData : NetworkBehaviour
         if (string.IsNullOrEmpty(nuevoRol))
             nuevoRol = "Sin rol";
 
+        if (Object.HasInputAuthority || Object.HasStateAuthority)
+        {
+            GameplayRoleCache.LocalRole = nuevoRol;
+        }
+
         if (Object.HasStateAuthority)
         {
             PlayerRole = nuevoRol;

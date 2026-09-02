@@ -1,6 +1,6 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using TMPro;
 
 public class HeroCardUI : MonoBehaviour
@@ -29,31 +29,35 @@ public class HeroCardUI : MonoBehaviour
     public Sprite spriteMagoAtaqueRayo;
     public Sprite spriteMagoNevisca;
 
-    private string rolLocal = "";
-    private bool listo = false;
-    private bool juegoTerminado = false;
+    [Header("Estado Local (Debug)")]
+    [SerializeField] private string rolLocal = "";
+    [SerializeField] private bool listo = false;
+    [SerializeField] private bool juegoTerminado = false;
 
-    private IEnumerator Start()
+    private void Start()
     {
-        while (GameplayManager.Instance == null || HeroCardManager.Instance == null)
+        StartCoroutine(IniciarUI());
+    }
+
+    private IEnumerator IniciarUI()
+    {
+        string rol = GameplayRoleCache.LocalRole;
+
+        if (string.IsNullOrEmpty(rol) || rol == "Sin rol")
         {
-            yield return null;
+            if (GameplayManager.Instance != null && !string.IsNullOrEmpty(GameplayManager.Instance.LocalPlayerRole) && GameplayManager.Instance.LocalPlayerRole != "Sin rol")
+            {
+                rol = GameplayManager.Instance.LocalPlayerRole;
+            }
+            else
+            {
+                rol = "Heroe 1";
+            }
         }
 
-        while (string.IsNullOrEmpty(GameplayManager.Instance.LocalPlayerRole) ||
-               GameplayManager.Instance.LocalPlayerRole == "Sin rol")
-        {
-            yield return null;
-        }
+        rolLocal = rol.Trim();
 
-        rolLocal = GameplayManager.Instance.LocalPlayerRole;
-
-        bool soyHeroe =
-            rolLocal == "Heroe 1" ||
-            rolLocal == "Heroe 2";
-
-        if (botonVerCartas != null)
-            botonVerCartas.gameObject.SetActive(soyHeroe);
+        bool soyHeroe = rolLocal == "Heroe 1" || rolLocal == "Heroe 2";
 
         if (menuCartas != null)
             menuCartas.SetActive(false);
@@ -61,14 +65,38 @@ public class HeroCardUI : MonoBehaviour
         if (!soyHeroe)
         {
             listo = false;
+            Debug.Log("[HeroCardUI] El rol local '" + rolLocal + "' no es un héroe. La UI de cartas no se activará para este jugador.");
             yield break;
         }
 
-        ConfigurarBotones();
+        while (HeroCardManager.Instance == null)
+        {
+            HeroCardManager.Instance = FindFirstObjectByType<HeroCardManager>();
+            if (HeroCardManager.Instance != null)
+                break;
+
+            yield return null;
+        }
+
+        try
+        {
+            ConfigurarBotones();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("[HeroCardUI] Error al configurar botones: " + ex.Message);
+        }
 
         listo = true;
 
-        ActualizarCartas();
+        try
+        {
+            ActualizarCartas();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("[HeroCardUI] Error al actualizar cartas: " + ex.Message);
+        }
 
         Debug.Log("[HeroCardUI] UI de cartas iniciada. Rol local = " + rolLocal);
     }
@@ -88,23 +116,44 @@ public class HeroCardUI : MonoBehaviour
             botonVerCartas.onClick.RemoveAllListeners();
             botonVerCartas.onClick.AddListener(AbrirMenuCartas);
         }
+        else
+        {
+            Debug.LogWarning("[HeroCardUI] 'botonVerCartas' no está asignado en el Inspector.");
+        }
 
         if (botonCerrarCartas != null)
         {
             botonCerrarCartas.onClick.RemoveAllListeners();
             botonCerrarCartas.onClick.AddListener(CerrarMenuCartas);
         }
-
-        for (int i = 0; i < botonesCarta.Length; i++)
+        else
         {
-            int index = i;
+            Debug.LogWarning("[HeroCardUI] 'botonCerrarCartas' no está asignado en el Inspector.");
+        }
 
-            if (botonesCarta[i] != null)
+        if (botonesCarta != null)
+        {
+            for (int i = 0; i < botonesCarta.Length; i++)
             {
-                botonesCarta[i].onClick.RemoveAllListeners();
-                botonesCarta[i].onClick.AddListener(() => OnCardPressed(index));
+                int index = i;
+
+                if (botonesCarta[i] != null)
+                {
+                    botonesCarta[i].onClick.RemoveAllListeners();
+                    botonesCarta[i].onClick.AddListener(() => OnCardPressed(index));
+                }
+                else
+                {
+                    Debug.LogWarning("[HeroCardUI] botonesCarta[" + i + "] no está asignado en el Inspector.");
+                }
             }
         }
+        else
+        {
+            Debug.LogWarning("[HeroCardUI] El arreglo 'botonesCarta' no está asignado en el Inspector.");
+        }
+
+        Debug.Log("[HeroCardUI] Botones de cartas configurados.");
     }
 
     public void AbrirMenuCartas()
@@ -133,35 +182,42 @@ public class HeroCardUI : MonoBehaviour
         if (HeroCardManager.Instance == null)
             return;
 
-        int cantidad =
-            HeroCardManager.Instance.GetCardCountForRole(rolLocal);
+        int cantidad = HeroCardManager.Instance.GetCardCountForRole(rolLocal);
 
         if (textoSinCartas != null)
             textoSinCartas.gameObject.SetActive(cantidad == 0);
 
-        for (int i = 0; i < botonesCarta.Length; i++)
+        int maxBotones = botonesCarta != null ? botonesCarta.Length : 0;
+        int maxImagenes = imagenesCarta != null ? imagenesCarta.Length : 0;
+        int total = Mathf.Max(maxBotones, maxImagenes);
+
+        for (int i = 0; i < total; i++)
         {
             bool tieneCarta = i < cantidad;
 
-            if (botonesCarta[i] != null)
+            if (botonesCarta != null && i < maxBotones && botonesCarta[i] != null)
             {
                 botonesCarta[i].gameObject.SetActive(tieneCarta);
                 botonesCarta[i].interactable = tieneCarta && !juegoTerminado;
             }
 
-            if (imagenesCarta[i] != null)
+            if (imagenesCarta != null && i < maxImagenes && imagenesCarta[i] != null)
             {
                 imagenesCarta[i].gameObject.SetActive(tieneCarta);
 
                 if (tieneCarta)
                 {
-                    int cardId =
-                        HeroCardManager.Instance.GetCardAtForRole(rolLocal, i);
-
+                    int cardId = HeroCardManager.Instance.GetCardAtForRole(rolLocal, i);
                     HeroCardId carta = (HeroCardId)cardId;
 
-                    imagenesCarta[i].sprite = ObtenerSpriteCarta(carta);
+                    Sprite spriteCarta = ObtenerSpriteCarta(carta);
+                    imagenesCarta[i].sprite = spriteCarta;
                     imagenesCarta[i].preserveAspect = true;
+
+                    if (spriteCarta == null)
+                    {
+                        Debug.LogWarning("[HeroCardUI] No se encontró Sprite para la carta: " + carta + " (ID: " + cardId + "). Revisa las referencias en el Inspector.");
+                    }
                 }
             }
         }
@@ -218,10 +274,13 @@ public class HeroCardUI : MonoBehaviour
         if (botonCerrarCartas != null)
             botonCerrarCartas.interactable = false;
 
-        for (int i = 0; i < botonesCarta.Length; i++)
+        if (botonesCarta != null)
         {
-            if (botonesCarta[i] != null)
-                botonesCarta[i].interactable = false;
+            for (int i = 0; i < botonesCarta.Length; i++)
+            {
+                if (botonesCarta[i] != null)
+                    botonesCarta[i].interactable = false;
+            }
         }
 
         Debug.Log("[HeroCardUI] Cartas bloqueadas por fin de juego.");

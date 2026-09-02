@@ -462,6 +462,23 @@ public class FichaRPG : MonoBehaviour
             return false;
         }
 
+        BoardPiece boardPiece = GetComponent<BoardPiece>();
+        if (boardPiece == null)
+            boardPiece = GetComponentInParent<BoardPiece>();
+
+        if (boardPiece != null && boardPiece.HasAttackedThisTurn)
+        {
+            if (mostrarLogs)
+            {
+                Debug.LogWarning(
+                    "[FichaRPG] Movimiento cancelado. El héroe ya realizó un ataque en este turno. Ficha = " +
+                    gameObject.name
+                );
+            }
+
+            return false;
+        }
+
         return true;
     }
 

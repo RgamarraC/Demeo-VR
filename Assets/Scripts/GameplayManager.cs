@@ -18,6 +18,11 @@ public class GameplayManager : MonoBehaviour
 
     private NetworkRunner runner;
 
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     private IEnumerator Start()
     {
         Instance = this;
@@ -29,7 +34,8 @@ public class GameplayManager : MonoBehaviour
 
         if (runner == null)
         {
-            Debug.Log("GAMEPLAY MANAGER: No se encontró NetworkRunner en Test.");
+            LocalPlayerRole = "Heroe 1";
+            Debug.Log("GAMEPLAY MANAGER: No se encontró NetworkRunner en Test. Asignando rol por defecto '" + LocalPlayerRole + "' para pruebas.");
             yield break;
         }
 
@@ -88,8 +94,10 @@ public class GameplayManager : MonoBehaviour
 
         Debug.LogWarning(
             "GAMEPLAY MANAGER: No se encontró el jugador local en GameplayRoleCache. LocalPlayerRef = " +
-            LocalPlayerRef
+            LocalPlayerRef + ". Asignando rol por defecto 'Heroe 1'."
         );
+
+        LocalPlayerRole = "Heroe 1";
     }
 
     private void CrearOrdenDeTurnos()
